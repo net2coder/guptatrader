@@ -1,0 +1,263 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded';
+
+export interface Order {
+  id: string;
+  order_number: string;
+  user_id: string | null;
+  guest_email: string | null;
+  status: OrderStatus;
+  payment_status: PaymentStatus;
+  subtotal: number;
+  tax_amount: number;
+  shipping_amount: number;
+  discount_amount: number;
+  total_amount: number;
+  shipping_address: {
+    full_name: string;
+    phone: string;
+    address_line_1: string;
+    address_line_2?: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+  };
+  billing_address: object | null;
+  notes: string | null;
+  tracking_number: string | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string | null;
+  product_name: string;
+  product_sku: string | null;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
+// Fetch user's orders
+export function useUserOrders() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['user-orders', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          items:order_items(*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+}
+
+// Fetch single order
+export function useOrder(orderId: string) {
+  return useQuery({
+    queryKey: ['order', orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          items:order_items(*)
+        `)
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orderId,
+  });
+}
+
+// Admin: Fetch all orders
+export function useAdminOrders() {
+  return useQuery({
+    queryKey: ['admin-orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          items:order_items(*),
+          profile:profiles!orders_user_id_fkey(full_name, phone)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// Admin: Update order status
+export function useUpdateOrderStatus() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ 
+      orderId, 
+      status, 
+      trackingNumber 
+    }: { 
+      orderId: string; 
+      status: OrderStatus; 
+      trackingNumber?: string;
+    }) => {
+      const updates: {
+        status: OrderStatus;
+        tracking_number?: string;
+        shipped_at?: string;
+        delivered_at?: string;
+      } = { status };
+
+      if (trackingNumber) {
+        updates.tracking_number = trackingNumber;
+      }
+
+      if (status === 'shipped') {
+        updates.shipped_at = new Date().toISOString();
+      }
+
+      if (status === 'delivered') {
+        updates.delivered_at = new Date().toISOString();
+      }
+
+      const { data, error } = await supabase
+        .from('orders')
+        .update(updates)
+        .eq('id', orderId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['user-orders'] });
+      toast({ title: 'Order status updated' });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error updating order', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    },
+  });
+}
+
+// Create order
+export function useCreateOrder() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      items,
+      shippingAddress,
+      guestEmail,
+    }: {
+      items: { productId: string; quantity: number; name: string; sku?: string; price: number }[];
+      shippingAddress: Order['shipping_address'];
+      guestEmail?: string;
+    }) => {
+      const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const taxAmount = subtotal * 0.18; // 18% GST
+      const shippingAmount = subtotal >= 10000 ? 0 : 500;
+      const totalAmount = subtotal + taxAmount + shippingAmount;
+
+      // Create order - order_number is auto-generated by trigger
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: 'TEMP-' + Date.now(), // Will be replaced by trigger
+          user_id: user?.id || null,
+          guest_email: guestEmail || null,
+          subtotal,
+          tax_amount: taxAmount,
+          shipping_amount: shippingAmount,
+          total_amount: totalAmount,
+          shipping_address: shippingAddress,
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_id: item.productId,
+        product_name: item.name,
+        product_sku: item.sku || null,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.price * item.quantity,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      // Update stock quantities manually
+      for (const item of items) {
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', item.productId)
+          .single();
+        
+        if (product) {
+          await supabase
+            .from('products')
+            .update({ stock_quantity: Math.max(0, product.stock_quantity - item.quantity) })
+            .eq('id', item.productId);
+        }
+      }
+
+      return order;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({ title: 'Order placed successfully!' });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error placing order', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    },
+  });
+}
