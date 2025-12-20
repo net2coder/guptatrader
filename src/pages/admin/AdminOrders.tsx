@@ -46,16 +46,32 @@ const statusColors: Record<OrderStatus, string> = {
   returned: 'bg-gray-100 text-gray-700',
 };
 
+interface ShippingAddress {
+  full_name?: string;
+  phone?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+}
+
 export default function AdminOrders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const { data: orders = [], isLoading } = useAdminOrders();
   const updateStatus = useUpdateOrderStatus();
 
+  const getShippingAddress = (order: any): ShippingAddress => {
+    return (order.shipping_address as ShippingAddress) || {};
+  };
+
   const filteredOrders = orders.filter(order => {
+    const address = getShippingAddress(order);
     const matchesSearch = 
       order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.shipping_address?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      address.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     
@@ -124,16 +140,18 @@ export default function AdminOrders() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOrders.map((order) => (
+                    {filteredOrders.map((order) => {
+                      const address = getShippingAddress(order);
+                      return (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">
                           {order.order_number}
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p>{order.shipping_address?.full_name || 'Guest'}</p>
+                            <p>{address.full_name || 'Guest'}</p>
                             <p className="text-sm text-muted-foreground">
-                              {order.guest_email || order.profile?.phone || '-'}
+                              {order.guest_email || '-'}
                             </p>
                           </div>
                         </TableCell>
@@ -174,15 +192,15 @@ export default function AdminOrders() {
                                     <div>
                                       <h4 className="font-medium mb-2">Shipping Address</h4>
                                       <div className="text-sm text-muted-foreground">
-                                        <p>{order.shipping_address?.full_name}</p>
-                                        <p>{order.shipping_address?.address_line_1}</p>
-                                        {order.shipping_address?.address_line_2 && (
-                                          <p>{order.shipping_address.address_line_2}</p>
+                                        <p>{address.full_name}</p>
+                                        <p>{address.address_line_1}</p>
+                                        {address.address_line_2 && (
+                                          <p>{address.address_line_2}</p>
                                         )}
                                         <p>
-                                          {order.shipping_address?.city}, {order.shipping_address?.state} {order.shipping_address?.postal_code}
+                                          {address.city}, {address.state} {address.postal_code}
                                         </p>
-                                        <p>Phone: {order.shipping_address?.phone}</p>
+                                        <p>Phone: {address.phone}</p>
                                       </div>
                                     </div>
                                     <div>
@@ -252,7 +270,8 @@ export default function AdminOrders() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    );
+                    })}
                   </TableBody>
                 </Table>
               </div>

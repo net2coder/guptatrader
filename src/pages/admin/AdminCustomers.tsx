@@ -101,7 +101,7 @@ export default function AdminCustomers() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="secondary">
-                            {customer.orders?.[0]?.count || 0} orders
+                            {(customer.orders as any)?.[0]?.count || 0} orders
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
