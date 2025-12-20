@@ -574,6 +574,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_order_with_items: {
+        Args: {
+          p_guest_email: string
+          p_items: Json
+          p_shipping_address: Json
+          p_user_id: string
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -582,6 +591,14 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      validate_coupon: {
+        Args: { p_code: string; p_order_subtotal: number }
+        Returns: {
+          discount_amount: number
+          message: string
+          valid: boolean
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "customer"

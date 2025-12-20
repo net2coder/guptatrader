@@ -82,13 +82,11 @@ export default function AuthPage() {
     setIsLoading(false);
 
     if (error) {
-      if (error.message.includes('already registered')) {
-        signUpForm.setError('email', {
-          message: 'This email is already registered. Please sign in instead.',
-        });
-      } else {
-        signUpForm.setError('root', { message: error.message });
-      }
+      // Use ambiguous error message to prevent account enumeration attacks
+      // Don't reveal whether email is already registered
+      signUpForm.setError('root', { 
+        message: 'Unable to create account. Please check your details and try again.' 
+      });
     }
   };
 
