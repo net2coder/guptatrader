@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { useCategories, useCreateCategory } from '@/hooks/useProducts';
+import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useProducts';
 import { 
   Plus, 
   Search,
@@ -26,39 +26,98 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+
+interface CategoryFormData {
+  name: string;
+  slug: string;
+  description: string;
+  image_url: string;
+  is_active: boolean;
+  sort_order: string;
+}
+
+const defaultFormData: CategoryFormData = {
+  name: '',
+  slug: '',
+  description: '',
+  image_url: '',
+  is_active: true,
+  sort_order: '0',
+};
 
 export default function AdminCategories() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newCategory, setNewCategory] = useState({
-    name: '',
-    slug: '',
-    description: '',
-    is_active: true,
-  });
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [formData, setFormData] = useState<CategoryFormData>(defaultFormData);
 
   const { data: categories = [], isLoading } = useCategories();
   const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+  const deleteCategory = useDeleteCategory();
 
   const filteredCategories = categories.filter(
     c => c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleCreateCategory = async () => {
-    if (!newCategory.name || !newCategory.slug) return;
-    
-    await createCategory.mutateAsync(newCategory);
-    setNewCategory({ name: '', slug: '', description: '', is_active: true });
-    setIsDialogOpen(false);
-  };
-
   const generateSlug = (name: string) => {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  };
+
+  const handleOpenCreate = () => {
+    setEditingCategory(null);
+    setFormData(defaultFormData);
+    setIsDialogOpen(true);
+  };
+
+  const handleOpenEdit = (category: any) => {
+    setEditingCategory(category);
+    setFormData({
+      name: category.name || '',
+      slug: category.slug || '',
+      description: category.description || '',
+      image_url: category.image_url || '',
+      is_active: category.is_active ?? true,
+      sort_order: String(category.sort_order || 0),
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!formData.name || !formData.slug) return;
+    
+    const payload = {
+      name: formData.name,
+      slug: formData.slug,
+      description: formData.description || null,
+      image_url: formData.image_url || null,
+      is_active: formData.is_active,
+      sort_order: Number(formData.sort_order) || 0,
+    };
+
+    if (editingCategory) {
+      await updateCategory.mutateAsync({ id: editingCategory.id, ...payload });
+    } else {
+      await createCategory.mutateAsync(payload);
+    }
+    setIsDialogOpen(false);
+    setFormData(defaultFormData);
+    setEditingCategory(null);
   };
 
   return (
@@ -69,74 +128,10 @@ export default function AdminCategories() {
             <h1 className="text-3xl font-display font-bold">Categories</h1>
             <p className="text-muted-foreground">Organize your product catalog</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Category
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Category</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g. Living Room"
-                    value={newCategory.name}
-                    onChange={(e) => {
-                      const name = e.target.value;
-                      setNewCategory(prev => ({
-                        ...prev,
-                        name,
-                        slug: generateSlug(name),
-                      }));
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slug">Slug</Label>
-                  <Input
-                    id="slug"
-                    placeholder="living-room"
-                    value={newCategory.slug}
-                    onChange={(e) => setNewCategory(prev => ({ ...prev, slug: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Brief description of this category"
-                    value={newCategory.description}
-                    onChange={(e) => setNewCategory(prev => ({ ...prev, description: e.target.value }))}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="is_active">Active</Label>
-                  <Switch
-                    id="is_active"
-                    checked={newCategory.is_active}
-                    onCheckedChange={(checked) => setNewCategory(prev => ({ ...prev, is_active: checked }))}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleCreateCategory}
-                  disabled={!newCategory.name || !newCategory.slug || createCategory.isPending}
-                >
-                  {createCategory.isPending ? 'Creating...' : 'Create Category'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={handleOpenCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Category
+          </Button>
         </div>
 
         <Card>
@@ -170,6 +165,7 @@ export default function AdminCategories() {
                       <TableHead>Category</TableHead>
                       <TableHead>Slug</TableHead>
                       <TableHead>Description</TableHead>
+                      <TableHead className="text-center">Order</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -177,8 +173,19 @@ export default function AdminCategories() {
                   <TableBody>
                     {filteredCategories.map((category) => (
                       <TableRow key={category.id}>
-                        <TableCell className="font-medium">
-                          {category.name}
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {category.image_url && (
+                              <div className="h-10 w-10 bg-muted rounded overflow-hidden">
+                                <img 
+                                  src={category.image_url} 
+                                  alt={category.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            )}
+                            <span className="font-medium">{category.name}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {category.slug}
@@ -187,18 +194,42 @@ export default function AdminCategories() {
                           {category.description || '-'}
                         </TableCell>
                         <TableCell className="text-center">
+                          {category.sort_order || 0}
+                        </TableCell>
+                        <TableCell className="text-center">
                           <Badge variant={category.is_active ? 'default' : 'secondary'}>
                             {category.is_active ? 'Active' : 'Inactive'}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(category)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{category.name}"? Products in this category will be unassigned.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteCategory.mutate(category.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -214,7 +245,7 @@ export default function AdminCategories() {
                   {searchQuery ? 'Try a different search term' : 'Get started by creating your first category'}
                 </p>
                 {!searchQuery && (
-                  <Button onClick={() => setIsDialogOpen(true)}>
+                  <Button onClick={handleOpenCreate}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Category
                   </Button>
@@ -224,6 +255,89 @@ export default function AdminCategories() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingCategory ? 'Edit Category' : 'Create New Category'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                placeholder="e.g. Living Room"
+                value={formData.name}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    name,
+                    slug: editingCategory ? prev.slug : generateSlug(name),
+                  }));
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="slug">Slug *</Label>
+              <Input
+                id="slug"
+                placeholder="living-room"
+                value={formData.slug}
+                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Brief description of this category"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="image_url">Image URL</Label>
+              <Input
+                id="image_url"
+                placeholder="https://..."
+                value={formData.image_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sort_order">Sort Order</Label>
+                <Input
+                  id="sort_order"
+                  type="number"
+                  value={formData.sort_order}
+                  onChange={(e) => setFormData(prev => ({ ...prev, sort_order: e.target.value }))}
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-8">
+                <Switch
+                  id="is_active"
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                />
+                <Label htmlFor="is_active">Active</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSave}
+              disabled={!formData.name || !formData.slug || createCategory.isPending || updateCategory.isPending}
+            >
+              {createCategory.isPending || updateCategory.isPending ? 'Saving...' : editingCategory ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

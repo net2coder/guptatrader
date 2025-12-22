@@ -10,11 +10,16 @@ import {
   Settings,
   LogOut,
   ChevronRight,
-  Menu
+  Menu,
+  Ticket,
+  RotateCcw,
+  Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { useAdminNotifications } from '@/hooks/useAdmin';
+import { Badge } from '@/components/ui/badge';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -26,14 +31,18 @@ const navItems = [
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { href: '/admin/customers', label: 'Customers', icon: Users },
   { href: '/admin/categories', label: 'Categories', icon: Tag },
+  { href: '/admin/coupons', label: 'Coupons', icon: Ticket },
+  { href: '/admin/returns', label: 'Returns', icon: RotateCcw },
+  { href: '/admin/notifications', label: 'Notifications', icon: Bell, showBadge: true },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
-function NavItem({ href, label, icon: Icon, isActive }: { 
+function NavItem({ href, label, icon: Icon, isActive, badge }: { 
   href: string; 
   label: string; 
   icon: typeof LayoutDashboard;
   isActive: boolean;
+  badge?: number;
 }) {
   return (
     <Link
@@ -46,7 +55,12 @@ function NavItem({ href, label, icon: Icon, isActive }: {
       )}
     >
       <Icon className="h-4 w-4" />
-      {label}
+      <span className="flex-1">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <Badge variant={isActive ? 'secondary' : 'default'} className="h-5 min-w-5 px-1.5 text-xs">
+          {badge}
+        </Badge>
+      )}
     </Link>
   );
 }
@@ -54,6 +68,8 @@ function NavItem({ href, label, icon: Icon, isActive }: {
 function Sidebar() {
   const location = useLocation();
   const { signOut, profile } = useAuth();
+  const { data: notifications = [] } = useAdminNotifications();
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
     <div className="flex flex-col h-full">
@@ -64,7 +80,7 @@ function Sidebar() {
         <p className="text-xs text-muted-foreground mt-1">Admin Panel</p>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavItem
             key={item.href}
@@ -76,6 +92,7 @@ function Sidebar() {
                 ? location.pathname === '/admin'
                 : location.pathname.startsWith(item.href)
             }
+            badge={item.showBadge ? unreadCount : undefined}
           />
         ))}
       </nav>
