@@ -499,11 +499,17 @@ export function useCustomers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          orders:orders(count)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Customer[];
+      return data.map(customer => ({
+        ...customer,
+        order_count: (customer.orders as any)?.[0]?.count || 0,
+      })) as Customer[];
     },
   });
 }
