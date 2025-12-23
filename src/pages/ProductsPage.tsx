@@ -19,9 +19,36 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { products, categories, materials, roomTypes, priceRanges } from '@/data/products';
+import { useProducts, useCategories } from '@/hooks/useProducts';
+import { Product } from '@/types/product';
 
-type SortOption = 'featured' | 'price-low' | 'price-high' | 'newest' | 'rating';
+type SortOption = 'featured' | 'price-low' | 'price-high' | 'newest';
+
+const priceRanges = [
+  { label: 'Under ₹25,000', min: 0, max: 25000 },
+  { label: '₹25,000 - ₹50,000', min: 25000, max: 50000 },
+  { label: '₹50,000 - ₹1,00,000', min: 50000, max: 100000 },
+  { label: 'Above ₹1,00,000', min: 100000, max: Infinity },
+];
+
+const materials = [
+  'Solid Wood',
+  'Engineered Wood',
+  'Metal',
+  'Fabric',
+  'Leather',
+  'Velvet',
+  'Mesh',
+];
+
+const roomTypes = [
+  'Living Room',
+  'Bedroom',
+  'Dining Room',
+  'Office',
+  'Study',
+  'Kids Room',
+];
 
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,23 +62,19 @@ export default function ProductsPage() {
 
   const searchQuery = searchParams.get('search')?.toLowerCase() || '';
 
-  const filteredProducts = useMemo(() => {
-    let result = [...products];
+  // Fetch data from database
+  const { data: products, isLoading: productsLoading } = useProducts({ search: searchQuery });
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
 
-    // Search filter
-    if (searchQuery) {
-      result = result.filter(
-        p =>
-          p.name.toLowerCase().includes(searchQuery) ||
-          p.description.toLowerCase().includes(searchQuery) ||
-          p.category.toLowerCase().includes(searchQuery)
-      );
-    }
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    
+    let result = [...products] as Product[];
 
     // Category filter
     if (selectedCategories.length > 0) {
       result = result.filter(p =>
-        selectedCategories.some(c => p.category.toLowerCase() === c.toLowerCase())
+        selectedCategories.some(c => p.category?.slug?.toLowerCase() === c.toLowerCase())
       );
     }
 
@@ -59,14 +82,14 @@ export default function ProductsPage() {
     if (selectedMaterials.length > 0) {
       result = result.filter(p =>
         selectedMaterials.some(m =>
-          p.material.toLowerCase().includes(m.toLowerCase())
+          p.material?.toLowerCase().includes(m.toLowerCase())
         )
       );
     }
 
     // Room filter
     if (selectedRooms.length > 0) {
-      result = result.filter(p => selectedRooms.includes(p.roomType));
+      result = result.filter(p => selectedRooms.includes(p.room_type || ''));
     }
 
     // Price filter
@@ -84,23 +107,20 @@ export default function ProductsPage() {
         result.sort((a, b) => b.price - a.price);
         break;
       case 'newest':
-        result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
-        break;
-      case 'rating':
-        result.sort((a, b) => b.rating - a.rating);
+        result.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
         break;
       default:
-        result.sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
+        result.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
     }
 
     return result;
-  }, [searchQuery, selectedCategories, selectedMaterials, selectedRooms, selectedPriceRange, sortBy]);
+  }, [products, selectedCategories, selectedMaterials, selectedRooms, selectedPriceRange, sortBy]);
 
-  const toggleCategory = (category: string) => {
+  const toggleCategory = (categorySlug: string) => {
     setSelectedCategories(prev =>
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
+      prev.includes(categorySlug)
+        ? prev.filter(c => c !== categorySlug)
+        : [...prev, categorySlug]
     );
   };
 
@@ -141,19 +161,18 @@ export default function ProductsPage() {
           <ChevronDown className="h-4 w-4" />
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-2 space-y-2">
-          {categories.map(category => (
+          {categories?.map(category => (
             <div key={category.id} className="flex items-center gap-2">
               <Checkbox
                 id={`cat-${category.id}`}
-                checked={selectedCategories.includes(category.id)}
-                onCheckedChange={() => toggleCategory(category.id)}
+                checked={selectedCategories.includes(category.slug)}
+                onCheckedChange={() => toggleCategory(category.slug)}
               />
               <label
                 htmlFor={`cat-${category.id}`}
-                className="text-sm cursor-pointer flex-1 flex justify-between"
+                className="text-sm cursor-pointer flex-1"
               >
-                <span>{category.name}</span>
-                <span className="text-muted-foreground">({category.count})</span>
+                {category.name}
               </label>
             </div>
           ))}
@@ -297,18 +316,21 @@ export default function ProductsPage() {
 
               {/* Active filters (desktop) */}
               <div className="hidden lg:flex flex-wrap gap-2">
-                {selectedCategories.map(cat => (
-                  <Button
-                    key={cat}
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => toggleCategory(cat)}
-                    className="h-7"
-                  >
-                    {categories.find(c => c.id === cat)?.name}
-                    <X className="h-3 w-3 ml-1" />
-                  </Button>
-                ))}
+                {selectedCategories.map(catSlug => {
+                  const cat = categories?.find(c => c.slug === catSlug);
+                  return (
+                    <Button
+                      key={catSlug}
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => toggleCategory(catSlug)}
+                      className="h-7"
+                    >
+                      {cat?.name || catSlug}
+                      <X className="h-3 w-3 ml-1" />
+                    </Button>
+                  );
+                })}
               </div>
 
               {/* Sort */}
@@ -324,13 +346,12 @@ export default function ProductsPage() {
                   <SelectItem value="price-low">Price: Low to High</SelectItem>
                   <SelectItem value="price-high">Price: High to Low</SelectItem>
                   <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Products grid */}
-            <ProductGrid products={filteredProducts} />
+            <ProductGrid products={filteredProducts} isLoading={productsLoading} />
           </div>
         </div>
       </div>

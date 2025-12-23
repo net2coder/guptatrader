@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Heart, ShoppingCart, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Product } from '@/data/products';
+import { Product, getProductImage, isInStock, getDiscountPercentage, formatPrice } from '@/types/product';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { motion } from 'framer-motion';
@@ -34,17 +34,10 @@ export function ProductCard({ product }: ProductCardProps) {
     );
   };
 
-  const discountPercentage = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-    : 0;
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
+  const discountPercentage = getDiscountPercentage(product);
+  const productImage = getProductImage(product);
+  const inStock = isInStock(product);
+  const categoryName = product.category?.name || 'Uncategorized';
 
   return (
     <motion.div
@@ -57,21 +50,18 @@ export function ProductCard({ product }: ProductCardProps) {
           {/* Image container */}
           <div className="relative aspect-square overflow-hidden bg-secondary">
             <img
-              src={product.images[0]}
+              src={productImage}
               alt={product.name}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
 
             {/* Badges */}
             <div className="absolute top-3 left-3 flex flex-col gap-2">
-              {product.isNew && (
-                <Badge className="bg-accent text-accent-foreground">New</Badge>
+              {product.is_featured && (
+                <Badge className="bg-accent text-accent-foreground">Featured</Badge>
               )}
               {discountPercentage > 0 && (
                 <Badge variant="destructive">{discountPercentage}% OFF</Badge>
-              )}
-              {product.isBestseller && (
-                <Badge variant="secondary">Bestseller</Badge>
               )}
             </div>
 
@@ -94,7 +84,7 @@ export function ProductCard({ product }: ProductCardProps) {
               <Button
                 className="w-full"
                 onClick={handleAddToCart}
-                disabled={!product.inStock}
+                disabled={!inStock}
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 {isInCart(product.id) ? 'Add More' : 'Add to Cart'}
@@ -105,35 +95,26 @@ export function ProductCard({ product }: ProductCardProps) {
           {/* Content */}
           <div className="p-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-              {product.category}
+              {categoryName}
             </p>
             <h3 className="font-medium text-card-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
               {product.name}
             </h3>
-
-            {/* Rating */}
-            <div className="flex items-center gap-1 mb-2">
-              <Star className="h-4 w-4 fill-accent text-accent" />
-              <span className="text-sm font-medium">{product.rating}</span>
-              <span className="text-xs text-muted-foreground">
-                ({product.reviewCount} reviews)
-              </span>
-            </div>
 
             {/* Price */}
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-semibold text-card-foreground">
                 {formatPrice(product.price)}
               </span>
-              {product.originalPrice && (
+              {product.compare_at_price && (
                 <span className="text-sm text-muted-foreground line-through">
-                  {formatPrice(product.originalPrice)}
+                  {formatPrice(product.compare_at_price)}
                 </span>
               )}
             </div>
 
             {/* Stock status */}
-            {!product.inStock && (
+            {!inStock && (
               <p className="text-sm text-destructive mt-2">Out of Stock</p>
             )}
           </div>

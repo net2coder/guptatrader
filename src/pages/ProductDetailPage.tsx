@@ -9,7 +9,6 @@ import {
   Truck,
   Shield,
   RefreshCw,
-  Star,
   Minus,
   Plus,
   Check,
@@ -19,19 +18,47 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProductGrid } from '@/components/products/ProductGrid';
-import { getProductBySlug, products } from '@/data/products';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useProduct, useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { toast } from 'sonner';
+import { getProductImage, getDiscountPercentage, formatPrice, isInStock } from '@/types/product';
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const product = getProductBySlug(slug || '');
+  const { data: product, isLoading } = useProduct(slug || '');
   const [quantity, setQuantity] = useState(1);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { addToCart, isInCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
+
+  // Fetch related products from same category
+  const { data: allProducts } = useProducts();
+  const relatedProducts = allProducts
+    ?.filter(p => p.category_id === product?.category_id && p.id !== product?.id)
+    .slice(0, 4) || [];
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+            <Skeleton className="aspect-square rounded-xl" />
+            <div className="space-y-4">
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-10 w-3/4" />
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!product) {
     return (
@@ -49,19 +76,11 @@ export default function ProductDetailPage() {
     );
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const discountPercentage = product.originalPrice
-    ? Math.round(
-        ((product.originalPrice - product.price) / product.originalPrice) * 100
-      )
-    : 0;
+  const images = product.images?.length ? product.images.sort((a, b) => a.sort_order - b.sort_order) : [];
+  const currentImage = images[currentImageIndex]?.image_url || getProductImage(product);
+  const discountPercentage = getDiscountPercentage(product);
+  const inStock = isInStock(product);
+  const categoryName = product.category?.name || 'Uncategorized';
 
   const handleAddToCart = () => {
     addToCart(product.id, quantity);
@@ -81,10 +100,6 @@ export default function ProductDetailPage() {
     addToCart(product.id, quantity);
     navigate('/cart');
   };
-
-  const relatedProducts = products
-    .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
 
   return (
     <Layout>
@@ -106,10 +121,10 @@ export default function ProductDetailPage() {
             <li>/</li>
             <li>
               <Link
-                to={`/products?category=${product.category.toLowerCase()}`}
+                to={`/products?category=${product.category?.slug || ''}`}
                 className="hover:text-foreground transition-colors"
               >
-                {product.category}
+                {categoryName}
               </Link>
             </li>
             <li>/</li>
@@ -126,15 +141,15 @@ export default function ProductDetailPage() {
           >
             <div className="relative aspect-square bg-secondary rounded-xl overflow-hidden">
               <img
-                src={product.images[currentImageIndex]}
+                src={currentImage}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
 
               {/* Badges */}
               <div className="absolute top-4 left-4 flex flex-col gap-2">
-                {product.isNew && (
-                  <Badge className="bg-accent text-accent-foreground">New</Badge>
+                {product.is_featured && (
+                  <Badge className="bg-accent text-accent-foreground">Featured</Badge>
                 )}
                 {discountPercentage > 0 && (
                   <Badge variant="destructive">{discountPercentage}% OFF</Badge>
@@ -142,7 +157,7 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Navigation arrows */}
-              {product.images.length > 1 && (
+              {images.length > 1 && (
                 <>
                   <Button
                     variant="secondary"
@@ -150,7 +165,7 @@ export default function ProductDetailPage() {
                     className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full"
                     onClick={() =>
                       setCurrentImageIndex(
-                        prev => (prev - 1 + product.images.length) % product.images.length
+                        prev => (prev - 1 + images.length) % images.length
                       )
                     }
                   >
@@ -161,7 +176,7 @@ export default function ProductDetailPage() {
                     size="icon"
                     className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full"
                     onClick={() =>
-                      setCurrentImageIndex(prev => (prev + 1) % product.images.length)
+                      setCurrentImageIndex(prev => (prev + 1) % images.length)
                     }
                   >
                     <ChevronRight className="h-5 w-5" />
@@ -171,11 +186,11 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Thumbnails */}
-            {product.images.length > 1 && (
+            {images.length > 1 && (
               <div className="flex gap-3">
-                {product.images.map((image, index) => (
+                {images.map((image, index) => (
                   <button
-                    key={index}
+                    key={image.id}
                     onClick={() => setCurrentImageIndex(index)}
                     className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
                       index === currentImageIndex
@@ -184,8 +199,8 @@ export default function ProductDetailPage() {
                     }`}
                   >
                     <img
-                      src={image}
-                      alt={`${product.name} ${index + 1}`}
+                      src={image.image_url}
+                      alt={image.alt_text || `${product.name} ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
                   </button>
@@ -202,38 +217,18 @@ export default function ProductDetailPage() {
           >
             <div>
               <p className="text-sm text-muted-foreground uppercase tracking-wide mb-2">
-                {product.category}
+                {categoryName}
               </p>
               <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
                 {product.name}
               </h1>
 
-              {/* Rating */}
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-5 w-5 ${
-                        i < Math.floor(product.rating)
-                          ? 'fill-accent text-accent'
-                          : 'text-muted'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="font-medium">{product.rating}</span>
-                <span className="text-muted-foreground">
-                  ({product.reviewCount} reviews)
-                </span>
-              </div>
-
               {/* Price */}
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl font-bold">{formatPrice(product.price)}</span>
-                {product.originalPrice && (
+                {product.compare_at_price && (
                   <span className="text-xl text-muted-foreground line-through">
-                    {formatPrice(product.originalPrice)}
+                    {formatPrice(product.compare_at_price)}
                   </span>
                 )}
                 {discountPercentage > 0 && (
@@ -246,16 +241,16 @@ export default function ProductDetailPage() {
 
             {/* Description */}
             <p className="text-muted-foreground leading-relaxed">
-              {product.description}
+              {product.description || product.short_description || 'No description available.'}
             </p>
 
             {/* Stock status */}
             <div className="flex items-center gap-2">
-              {product.inStock ? (
+              {inStock ? (
                 <>
                   <Check className="h-5 w-5 text-green-600" />
                   <span className="text-green-600 font-medium">
-                    In Stock ({product.stockQuantity} available)
+                    In Stock ({product.stock_quantity} available)
                   </span>
                 </>
               ) : (
@@ -283,9 +278,9 @@ export default function ProductDetailPage() {
                     size="icon"
                     className="h-10 w-10"
                     onClick={() =>
-                      setQuantity(q => Math.min(product.stockQuantity, q + 1))
+                      setQuantity(q => Math.min(product.stock_quantity, q + 1))
                     }
-                    disabled={quantity >= product.stockQuantity}
+                    disabled={quantity >= product.stock_quantity}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -297,7 +292,7 @@ export default function ProductDetailPage() {
                   size="lg"
                   className="flex-1"
                   onClick={handleAddToCart}
-                  disabled={!product.inStock}
+                  disabled={!inStock}
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   {isInCart(product.id) ? 'Add More' : 'Add to Cart'}
@@ -307,7 +302,7 @@ export default function ProductDetailPage() {
                   variant="secondary"
                   className="flex-1"
                   onClick={handleBuyNow}
-                  disabled={!product.inStock}
+                  disabled={!inStock}
                 >
                   Buy Now
                 </Button>
@@ -337,7 +332,7 @@ export default function ProductDetailPage() {
               <div className="flex items-center gap-3">
                 <Shield className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">{product.specifications.warranty}</p>
+                  <p className="text-sm font-medium">5 Year Warranty</p>
                   <p className="text-xs text-muted-foreground">Manufacturer Warranty</p>
                 </div>
               </div>
@@ -363,12 +358,6 @@ export default function ProductDetailPage() {
                 Specifications
               </TabsTrigger>
               <TabsTrigger
-                value="reviews"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
-              >
-                Reviews ({product.reviewCount})
-              </TabsTrigger>
-              <TabsTrigger
                 value="shipping"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
               >
@@ -380,45 +369,39 @@ export default function ProductDetailPage() {
               <div className="max-w-2xl">
                 <table className="w-full">
                   <tbody>
-                    <tr className="border-b border-border">
-                      <td className="py-3 font-medium">Dimensions</td>
-                      <td className="py-3 text-muted-foreground">
-                        {product.specifications.dimensions}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-3 font-medium">Weight</td>
-                      <td className="py-3 text-muted-foreground">
-                        {product.specifications.weight}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-3 font-medium">Material</td>
-                      <td className="py-3 text-muted-foreground">
-                        {product.specifications.material}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-3 font-medium">Color</td>
-                      <td className="py-3 text-muted-foreground">
-                        {product.specifications.color}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-3 font-medium">Warranty</td>
-                      <td className="py-3 text-muted-foreground">
-                        {product.specifications.warranty}
-                      </td>
-                    </tr>
+                    {product.dimensions && (
+                      <tr className="border-b border-border">
+                        <td className="py-3 font-medium">Dimensions</td>
+                        <td className="py-3 text-muted-foreground">{product.dimensions}</td>
+                      </tr>
+                    )}
+                    {product.weight && (
+                      <tr className="border-b border-border">
+                        <td className="py-3 font-medium">Weight</td>
+                        <td className="py-3 text-muted-foreground">{product.weight} kg</td>
+                      </tr>
+                    )}
+                    {product.material && (
+                      <tr className="border-b border-border">
+                        <td className="py-3 font-medium">Material</td>
+                        <td className="py-3 text-muted-foreground">{product.material}</td>
+                      </tr>
+                    )}
+                    {product.color && (
+                      <tr className="border-b border-border">
+                        <td className="py-3 font-medium">Color</td>
+                        <td className="py-3 text-muted-foreground">{product.color}</td>
+                      </tr>
+                    )}
+                    {product.sku && (
+                      <tr>
+                        <td className="py-3 font-medium">SKU</td>
+                        <td className="py-3 text-muted-foreground">{product.sku}</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
-            </TabsContent>
-
-            <TabsContent value="reviews" className="py-6">
-              <p className="text-muted-foreground">
-                Customer reviews will be displayed here.
-              </p>
             </TabsContent>
 
             <TabsContent value="shipping" className="py-6">

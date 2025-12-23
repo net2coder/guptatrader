@@ -3,10 +3,13 @@ import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProductGrid } from '@/components/products/ProductGrid';
-import { getFeaturedProducts } from '@/data/products';
+import { useProducts } from '@/hooks/useProducts';
 
 export function FeaturedProducts() {
-  const featuredProducts = getFeaturedProducts();
+  const { data: products, isLoading } = useProducts({ featured: true });
+
+  // Limit to 4 featured products
+  const featuredProducts = products?.slice(0, 4) || [];
 
   return (
     <section className="py-16 md:py-24">
@@ -48,7 +51,7 @@ export function FeaturedProducts() {
           </motion.div>
         </div>
 
-        <ProductGrid products={featuredProducts} />
+        <ProductGrid products={featuredProducts} isLoading={isLoading} />
       </div>
     </section>
   );
