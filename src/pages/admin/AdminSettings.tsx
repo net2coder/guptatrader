@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { 
   useShippingZones, 
   useCreateShippingZone, 
@@ -14,6 +15,7 @@ import {
   useDeleteShippingZone,
   useActivityLogs,
 } from '@/hooks/useAdmin';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Settings, 
   Truck, 
@@ -23,6 +25,10 @@ import {
   Edit,
   Trash2,
   Save,
+  Store,
+  Clock,
+  Bell,
+  AlertCircle
 } from 'lucide-react';
 import {
   Table,
@@ -43,6 +49,7 @@ import {
 import { format } from 'date-fns';
 
 export default function AdminSettings() {
+  const { toast } = useToast();
   const { data: shippingZones = [], isLoading: zonesLoading } = useShippingZones();
   const { data: activityLogs = [], isLoading: logsLoading } = useActivityLogs();
   
@@ -61,6 +68,18 @@ export default function AdminSettings() {
     estimated_days_min: 3,
     estimated_days_max: 7,
     is_active: true,
+  });
+
+  // Store settings (local state - in production this would be stored in DB)
+  const [storeSettings, setStoreSettings] = useState({
+    storeName: 'Gupta Traders',
+    storeEmail: 'support@guptatraders.com',
+    storePhone: '+91 98765 43210',
+    autoCancelDays: 7,
+    enableOrderNotifications: true,
+    enableLowStockAlerts: true,
+    lowStockThreshold: 5,
+    taxRate: 18,
   });
 
   const resetZoneForm = () => {
@@ -113,6 +132,11 @@ export default function AdminSettings() {
     resetZoneForm();
   };
 
+  const handleSaveStoreSettings = () => {
+    // In production, this would save to DB
+    toast({ title: 'Settings saved successfully' });
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -121,11 +145,23 @@ export default function AdminSettings() {
           <p className="text-muted-foreground">Configure your store settings</p>
         </div>
 
-        <Tabs defaultValue="shipping" className="space-y-6">
-          <TabsList>
+        <Tabs defaultValue="general" className="space-y-6">
+          <TabsList className="flex-wrap">
+            <TabsTrigger value="general" className="gap-2">
+              <Store className="h-4 w-4" />
+              General
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Orders
+            </TabsTrigger>
             <TabsTrigger value="shipping" className="gap-2">
               <Truck className="h-4 w-4" />
               Shipping
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-2">
+              <Bell className="h-4 w-4" />
+              Notifications
             </TabsTrigger>
             <TabsTrigger value="security" className="gap-2">
               <Shield className="h-4 w-4" />
@@ -133,9 +169,127 @@ export default function AdminSettings() {
             </TabsTrigger>
             <TabsTrigger value="logs" className="gap-2">
               <History className="h-4 w-4" />
-              Activity Logs
+              Logs
             </TabsTrigger>
           </TabsList>
+
+          {/* General Settings */}
+          <TabsContent value="general">
+            <Card>
+              <CardHeader>
+                <CardTitle>Store Information</CardTitle>
+                <CardDescription>Basic store details and configuration</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="storeName">Store Name</Label>
+                    <Input
+                      id="storeName"
+                      value={storeSettings.storeName}
+                      onChange={(e) => setStoreSettings({ ...storeSettings, storeName: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="storeEmail">Store Email</Label>
+                    <Input
+                      id="storeEmail"
+                      type="email"
+                      value={storeSettings.storeEmail}
+                      onChange={(e) => setStoreSettings({ ...storeSettings, storeEmail: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="storePhone">Store Phone</Label>
+                    <Input
+                      id="storePhone"
+                      value={storeSettings.storePhone}
+                      onChange={(e) => setStoreSettings({ ...storeSettings, storePhone: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                    <Input
+                      id="taxRate"
+                      type="number"
+                      value={storeSettings.taxRate}
+                      onChange={(e) => setStoreSettings({ ...storeSettings, taxRate: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleSaveStoreSettings}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Order Settings */}
+          <TabsContent value="orders">
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Management</CardTitle>
+                <CardDescription>Configure order handling and automation</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <h4 className="font-medium">Payment Method</h4>
+                      <p className="text-sm text-muted-foreground">Manual confirmation (no online payment)</p>
+                    </div>
+                    <Badge>Manual</Badge>
+                  </div>
+
+                  <div className="p-4 border rounded-lg space-y-4">
+                    <div>
+                      <h4 className="font-medium">Auto-Cancel Pending Orders</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically cancel orders that remain pending for too long
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Label htmlFor="autoCancelDays">Cancel after (days)</Label>
+                      <Input
+                        id="autoCancelDays"
+                        type="number"
+                        value={storeSettings.autoCancelDays}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, autoCancelDays: Number(e.target.value) })}
+                        className="w-24"
+                        min={1}
+                        max={30}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Orders pending for more than {storeSettings.autoCancelDays} days will be auto-cancelled
+                    </p>
+                  </div>
+
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium mb-2">Order Status Flow</h4>
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <Badge variant="outline">Pending</Badge>
+                      <span>→</span>
+                      <Badge variant="outline">Confirmed</Badge>
+                      <span>→</span>
+                      <Badge variant="outline">Processing</Badge>
+                      <span>→</span>
+                      <Badge variant="outline">Shipped</Badge>
+                      <span>→</span>
+                      <Badge variant="outline">Delivered</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <Button onClick={handleSaveStoreSettings}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Shipping Settings */}
           <TabsContent value="shipping">
@@ -299,6 +453,61 @@ export default function AdminSettings() {
                     </Button>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Notification Settings */}
+          <TabsContent value="notifications">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Settings</CardTitle>
+                <CardDescription>Configure admin notifications and alerts</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium">New Order Notifications</h4>
+                    <p className="text-sm text-muted-foreground">Receive alerts when new orders are placed</p>
+                  </div>
+                  <Switch
+                    checked={storeSettings.enableOrderNotifications}
+                    onCheckedChange={(checked) => setStoreSettings({ ...storeSettings, enableOrderNotifications: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium">Low Stock Alerts</h4>
+                    <p className="text-sm text-muted-foreground">Get notified when products are running low</p>
+                  </div>
+                  <Switch
+                    checked={storeSettings.enableLowStockAlerts}
+                    onCheckedChange={(checked) => setStoreSettings({ ...storeSettings, enableLowStockAlerts: checked })}
+                  />
+                </div>
+
+                {storeSettings.enableLowStockAlerts && (
+                  <div className="p-4 border rounded-lg">
+                    <Label htmlFor="lowStockThreshold" className="mb-2 block">Low Stock Threshold</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="lowStockThreshold"
+                        type="number"
+                        value={storeSettings.lowStockThreshold}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, lowStockThreshold: Number(e.target.value) })}
+                        className="w-24"
+                        min={1}
+                      />
+                      <span className="text-sm text-muted-foreground">units</span>
+                    </div>
+                  </div>
+                )}
+
+                <Button onClick={handleSaveStoreSettings}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
