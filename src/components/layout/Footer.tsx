@@ -80,15 +80,34 @@ export function Footer() {
             <h4 className="font-semibold mb-4">Quick Links</h4>
             <nav className="flex flex-col gap-2">
               {quickLinks.length > 0 ? (
-                quickLinks.sort((a, b) => a.sort_order - b.sort_order).map(item => (
-                  <Link
-                    key={item.id}
-                    to={item.url || '#'}
-                    className="text-background/70 hover:text-background transition-colors"
-                  >
-                    {item.title}
-                  </Link>
-                ))
+                quickLinks.sort((a, b) => a.sort_order - b.sort_order).map(item => {
+                  const url = item.url || '#';
+                  const isExternal = url.startsWith('http://') || url.startsWith('https://');
+                  
+                  if (isExternal) {
+                    return (
+                      <a
+                        key={item.id}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-background/70 hover:text-background transition-colors"
+                      >
+                        {item.title}
+                      </a>
+                    );
+                  }
+                  
+                  return (
+                    <Link
+                      key={item.id}
+                      to={url}
+                      className="text-background/70 hover:text-background transition-colors"
+                    >
+                      {item.title}
+                    </Link>
+                  );
+                })
               ) : (
                 <>
                   <Link to="/products" className="text-background/70 hover:text-background transition-colors">
@@ -110,15 +129,34 @@ export function Footer() {
             <h4 className="font-semibold mb-4">Customer Service</h4>
             <nav className="flex flex-col gap-2">
               {customerService.length > 0 ? (
-                customerService.sort((a, b) => a.sort_order - b.sort_order).map(item => (
-                  <Link
-                    key={item.id}
-                    to={item.url || '#'}
-                    className="text-background/70 hover:text-background transition-colors"
-                  >
-                    {item.title}
-                  </Link>
-                ))
+                customerService.sort((a, b) => a.sort_order - b.sort_order).map(item => {
+                  const url = item.url || '#';
+                  const isExternal = url.startsWith('http://') || url.startsWith('https://');
+                  
+                  if (isExternal) {
+                    return (
+                      <a
+                        key={item.id}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-background/70 hover:text-background transition-colors"
+                      >
+                        {item.title}
+                      </a>
+                    );
+                  }
+                  
+                  return (
+                    <Link
+                      key={item.id}
+                      to={url}
+                      className="text-background/70 hover:text-background transition-colors"
+                    >
+                      {item.title}
+                    </Link>
+                  );
+                })
               ) : (
                 <>
                   <Link to="/profile?tab=orders" className="text-background/70 hover:text-background transition-colors">
