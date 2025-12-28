@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   useShippingZones, 
   useCreateShippingZone, 
@@ -15,6 +16,8 @@ import {
   useDeleteShippingZone,
   useActivityLogs,
 } from '@/hooks/useAdmin';
+import { useStoreSettings, useBulkUpdateStoreSettings } from '@/hooks/useStoreSettings';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Settings, 
@@ -28,7 +31,9 @@ import {
   Store,
   Clock,
   Bell,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  Image
 } from 'lucide-react';
 import {
   Table,
@@ -52,10 +57,15 @@ export default function AdminSettings() {
   const { toast } = useToast();
   const { data: shippingZones = [], isLoading: zonesLoading } = useShippingZones();
   const { data: activityLogs = [], isLoading: logsLoading } = useActivityLogs();
+  const { data: storeSettings, isLoading: settingsLoading } = useStoreSettings();
   
   const createZone = useCreateShippingZone();
   const updateZone = useUpdateShippingZone();
   const deleteZone = useDeleteShippingZone();
+  const updateSettings = useBulkUpdateStoreSettings();
+  
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const [isZoneDialogOpen, setIsZoneDialogOpen] = useState(false);
   const [editingZone, setEditingZone] = useState<any>(null);
@@ -70,17 +80,39 @@ export default function AdminSettings() {
     is_active: true,
   });
 
-  // Store settings (local state - in production this would be stored in DB)
-  const [storeSettings, setStoreSettings] = useState({
-    storeName: 'Gupta Traders',
-    storeEmail: 'support@guptatraders.com',
-    storePhone: '+91 98765 43210',
-    autoCancelDays: 7,
-    enableOrderNotifications: true,
-    enableLowStockAlerts: true,
-    lowStockThreshold: 5,
-    taxRate: 18,
+  // Local form state for store settings
+  const [localSettings, setLocalSettings] = useState({
+    store_name: '',
+    store_email: '',
+    store_phone: '',
+    store_address: '',
+    gst_number: '',
+    tax_rate: '18',
+    auto_cancel_days: '7',
+    enable_order_notifications: 'true',
+    enable_low_stock_alerts: 'true',
+    low_stock_threshold: '5',
+    site_logo_url: '',
   });
+
+  // Sync local settings with fetched data
+  useEffect(() => {
+    if (storeSettings) {
+      setLocalSettings({
+        store_name: storeSettings.store_name || '',
+        store_email: storeSettings.store_email || '',
+        store_phone: storeSettings.store_phone || '',
+        store_address: storeSettings.store_address || '',
+        gst_number: storeSettings.gst_number || '',
+        tax_rate: storeSettings.tax_rate || '18',
+        auto_cancel_days: storeSettings.auto_cancel_days || '7',
+        enable_order_notifications: storeSettings.enable_order_notifications || 'true',
+        enable_low_stock_alerts: storeSettings.enable_low_stock_alerts || 'true',
+        low_stock_threshold: storeSettings.low_stock_threshold || '5',
+        site_logo_url: storeSettings.site_logo_url || '',
+      });
+    }
+  }, [storeSettings]);
 
   const resetZoneForm = () => {
     setZoneForm({
@@ -132,10 +164,47 @@ export default function AdminSettings() {
     resetZoneForm();
   };
 
-  const handleSaveStoreSettings = () => {
-    // In production, this would save to DB
-    toast({ title: 'Settings saved successfully' });
+  const handleSaveStoreSettings = async () => {
+    await updateSettings.mutateAsync(localSettings);
   };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('site-assets')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('site-assets')
+        .getPublicUrl(fileName);
+
+      setLocalSettings(prev => ({ ...prev, site_logo_url: publicUrl }));
+      toast({ title: 'Logo uploaded successfully' });
+    } catch (error: any) {
+      toast({ title: 'Error uploading logo', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  if (settingsLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -175,54 +244,119 @@ export default function AdminSettings() {
 
           {/* General Settings */}
           <TabsContent value="general">
-            <Card>
-              <CardHeader>
-                <CardTitle>Store Information</CardTitle>
-                <CardDescription>Basic store details and configuration</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="storeName">Store Name</Label>
-                    <Input
-                      id="storeName"
-                      value={storeSettings.storeName}
-                      onChange={(e) => setStoreSettings({ ...storeSettings, storeName: e.target.value })}
-                    />
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Store Information</CardTitle>
+                  <CardDescription>Basic store details and configuration</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="storeName">Store Name</Label>
+                      <Input
+                        id="storeName"
+                        value={localSettings.store_name}
+                        onChange={(e) => setLocalSettings({ ...localSettings, store_name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="storeEmail">Store Email</Label>
+                      <Input
+                        id="storeEmail"
+                        type="email"
+                        value={localSettings.store_email}
+                        onChange={(e) => setLocalSettings({ ...localSettings, store_email: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="storePhone">Store Phone</Label>
+                      <Input
+                        id="storePhone"
+                        value={localSettings.store_phone}
+                        onChange={(e) => setLocalSettings({ ...localSettings, store_phone: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="gstNumber">GST Number</Label>
+                      <Input
+                        id="gstNumber"
+                        value={localSettings.gst_number}
+                        onChange={(e) => setLocalSettings({ ...localSettings, gst_number: e.target.value })}
+                        placeholder="GSTIN: 06XXXXX1234X1ZX"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                      <Input
+                        id="taxRate"
+                        type="number"
+                        value={localSettings.tax_rate}
+                        onChange={(e) => setLocalSettings({ ...localSettings, tax_rate: e.target.value })}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="storeEmail">Store Email</Label>
-                    <Input
-                      id="storeEmail"
-                      type="email"
-                      value={storeSettings.storeEmail}
-                      onChange={(e) => setStoreSettings({ ...storeSettings, storeEmail: e.target.value })}
+                    <Label htmlFor="storeAddress">Store Address</Label>
+                    <Textarea
+                      id="storeAddress"
+                      value={localSettings.store_address}
+                      onChange={(e) => setLocalSettings({ ...localSettings, store_address: e.target.value })}
+                      rows={2}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="storePhone">Store Phone</Label>
-                    <Input
-                      id="storePhone"
-                      value={storeSettings.storePhone}
-                      onChange={(e) => setStoreSettings({ ...storeSettings, storePhone: e.target.value })}
-                    />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Site Logo</CardTitle>
+                  <CardDescription>Upload your store logo (displayed in header and invoices)</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    {localSettings.site_logo_url ? (
+                      <div className="h-16 w-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                        <img 
+                          src={localSettings.site_logo_url} 
+                          alt="Store Logo" 
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-16 w-32 bg-muted rounded-lg flex items-center justify-center">
+                        <Image className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleLogoUpload}
+                      />
+                      <Button 
+                        variant="outline" 
+                        onClick={() => logoInputRef.current?.click()}
+                        disabled={uploadingLogo}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Recommended: PNG or SVG, max 2MB
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="taxRate">Tax Rate (%)</Label>
-                    <Input
-                      id="taxRate"
-                      type="number"
-                      value={storeSettings.taxRate}
-                      onChange={(e) => setStoreSettings({ ...storeSettings, taxRate: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-                <Button onClick={handleSaveStoreSettings}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              <Button onClick={handleSaveStoreSettings} disabled={updateSettings.isPending}>
+                <Save className="h-4 w-4 mr-2" />
+                {updateSettings.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           </TabsContent>
 
           {/* Order Settings */}
@@ -254,8 +388,8 @@ export default function AdminSettings() {
                       <Input
                         id="autoCancelDays"
                         type="number"
-                        value={storeSettings.autoCancelDays}
-                        onChange={(e) => setStoreSettings({ ...storeSettings, autoCancelDays: Number(e.target.value) })}
+                        value={localSettings.auto_cancel_days}
+                        onChange={(e) => setLocalSettings({ ...localSettings, auto_cancel_days: e.target.value })}
                         className="w-24"
                         min={1}
                         max={30}
@@ -263,7 +397,7 @@ export default function AdminSettings() {
                     </div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
-                      Orders pending for more than {storeSettings.autoCancelDays} days will be auto-cancelled
+                      Orders pending for more than {localSettings.auto_cancel_days} days will be auto-cancelled
                     </p>
                   </div>
 
@@ -283,9 +417,9 @@ export default function AdminSettings() {
                   </div>
                 </div>
 
-                <Button onClick={handleSaveStoreSettings}>
+                <Button onClick={handleSaveStoreSettings} disabled={updateSettings.isPending}>
                   <Save className="h-4 w-4 mr-2" />
-                  Save Changes
+                  {updateSettings.isPending ? 'Saving...' : 'Save Changes'}
                 </Button>
               </CardContent>
             </Card>
@@ -446,67 +580,75 @@ export default function AdminSettings() {
                   <div className="text-center py-8">
                     <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium mb-2">No shipping zones</h3>
-                    <p className="text-muted-foreground mb-4">Add zones to configure shipping rates</p>
-                    <Button onClick={() => setIsZoneDialogOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Zone
-                    </Button>
+                    <p className="text-muted-foreground mb-4">Add shipping zones to enable delivery</p>
                   </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Notification Settings */}
+          {/* Notifications Settings */}
           <TabsContent value="notifications">
             <Card>
               <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>Configure admin notifications and alerts</CardDescription>
+                <CardTitle>Notification Preferences</CardTitle>
+                <CardDescription>Configure alerts and notifications</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">New Order Notifications</h4>
-                    <p className="text-sm text-muted-foreground">Receive alerts when new orders are placed</p>
-                  </div>
-                  <Switch
-                    checked={storeSettings.enableOrderNotifications}
-                    onCheckedChange={(checked) => setStoreSettings({ ...storeSettings, enableOrderNotifications: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Low Stock Alerts</h4>
-                    <p className="text-sm text-muted-foreground">Get notified when products are running low</p>
-                  </div>
-                  <Switch
-                    checked={storeSettings.enableLowStockAlerts}
-                    onCheckedChange={(checked) => setStoreSettings({ ...storeSettings, enableLowStockAlerts: checked })}
-                  />
-                </div>
-
-                {storeSettings.enableLowStockAlerts && (
-                  <div className="p-4 border rounded-lg">
-                    <Label htmlFor="lowStockThreshold" className="mb-2 block">Low Stock Threshold</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="lowStockThreshold"
-                        type="number"
-                        value={storeSettings.lowStockThreshold}
-                        onChange={(e) => setStoreSettings({ ...storeSettings, lowStockThreshold: Number(e.target.value) })}
-                        className="w-24"
-                        min={1}
-                      />
-                      <span className="text-sm text-muted-foreground">units</span>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <h4 className="font-medium">New Order Notifications</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Get notified when new orders are placed
+                      </p>
                     </div>
+                    <Switch
+                      checked={localSettings.enable_order_notifications === 'true'}
+                      onCheckedChange={(checked) => setLocalSettings({ 
+                        ...localSettings, 
+                        enable_order_notifications: checked ? 'true' : 'false' 
+                      })}
+                    />
                   </div>
-                )}
 
-                <Button onClick={handleSaveStoreSettings}>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <h4 className="font-medium">Low Stock Alerts</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Get notified when products are running low
+                      </p>
+                    </div>
+                    <Switch
+                      checked={localSettings.enable_low_stock_alerts === 'true'}
+                      onCheckedChange={(checked) => setLocalSettings({ 
+                        ...localSettings, 
+                        enable_low_stock_alerts: checked ? 'true' : 'false' 
+                      })}
+                    />
+                  </div>
+
+                  {localSettings.enable_low_stock_alerts === 'true' && (
+                    <div className="p-4 border rounded-lg space-y-4">
+                      <div className="flex items-center gap-4">
+                        <Label htmlFor="lowStockThreshold">Low stock threshold</Label>
+                        <Input
+                          id="lowStockThreshold"
+                          type="number"
+                          value={localSettings.low_stock_threshold}
+                          onChange={(e) => setLocalSettings({ ...localSettings, low_stock_threshold: e.target.value })}
+                          className="w-24"
+                          min={1}
+                        />
+                        <span className="text-sm text-muted-foreground">units</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <Button onClick={handleSaveStoreSettings} disabled={updateSettings.isPending}>
                   <Save className="h-4 w-4 mr-2" />
-                  Save Changes
+                  {updateSettings.isPending ? 'Saving...' : 'Save Changes'}
                 </Button>
               </CardContent>
             </Card>
@@ -519,27 +661,19 @@ export default function AdminSettings() {
                 <CardTitle>Security Settings</CardTitle>
                 <CardDescription>Manage security and access controls</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Row Level Security</h4>
-                    <p className="text-sm text-muted-foreground">Database-level access controls are enabled</p>
-                  </div>
-                  <Badge variant="default">Enabled</Badge>
+              <CardContent className="space-y-4">
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2">Admin Access</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Only users with the admin role can access this panel. Admin roles are managed through the database.
+                  </p>
                 </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Authentication</h4>
-                    <p className="text-sm text-muted-foreground">Email/password authentication is active</p>
-                  </div>
-                  <Badge variant="default">Active</Badge>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Admin Role</h4>
-                    <p className="text-sm text-muted-foreground">Role-based access control for admin features</p>
-                  </div>
-                  <Badge variant="default">Configured</Badge>
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2">Row Level Security</h4>
+                  <p className="text-sm text-muted-foreground">
+                    All database tables have RLS enabled to ensure data security.
+                  </p>
+                  <Badge variant="secondary" className="mt-2">Enabled</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -550,7 +684,7 @@ export default function AdminSettings() {
             <Card>
               <CardHeader>
                 <CardTitle>Activity Logs</CardTitle>
-                <CardDescription>Track admin actions and changes</CardDescription>
+                <CardDescription>Recent admin activities</CardDescription>
               </CardHeader>
               <CardContent>
                 {logsLoading ? (
@@ -561,23 +695,17 @@ export default function AdminSettings() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Timestamp</TableHead>
                         <TableHead>Action</TableHead>
-                        <TableHead>Entity Type</TableHead>
-                        <TableHead>Entity ID</TableHead>
+                        <TableHead>Entity</TableHead>
+                        <TableHead>Date</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {activityLogs.map((log) => (
                         <TableRow key={log.id}>
-                          <TableCell className="text-muted-foreground">
-                            {format(new Date(log.created_at), 'PPp')}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{log.action}</Badge>
-                          </TableCell>
-                          <TableCell>{log.entity_type}</TableCell>
-                          <TableCell className="font-mono text-sm">{log.entity_id || '-'}</TableCell>
+                          <TableCell className="font-medium">{log.action}</TableCell>
+                          <TableCell>{log.entity_type}{log.entity_id ? ` (${log.entity_id.slice(0, 8)}...)` : ''}</TableCell>
+                          <TableCell>{format(new Date(log.created_at), 'MMM d, yyyy HH:mm')}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -585,8 +713,8 @@ export default function AdminSettings() {
                 ) : (
                   <div className="text-center py-8">
                     <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No activity logs yet</h3>
-                    <p className="text-muted-foreground">Admin actions will be logged here</p>
+                    <h3 className="text-lg font-medium mb-2">No activity logs</h3>
+                    <p className="text-muted-foreground">Admin activities will be logged here</p>
                   </div>
                 )}
               </CardContent>

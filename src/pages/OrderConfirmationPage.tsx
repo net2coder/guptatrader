@@ -1,13 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Package, MapPin, Phone, Mail, Download, Home, ShoppingBag } from 'lucide-react';
+import { CheckCircle, Package, MapPin, Phone, Download, Home, ShoppingBag } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useOrder } from '@/hooks/useOrders';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { formatPrice } from '@/lib/utils';
 
 interface ShippingAddress {
@@ -24,7 +24,13 @@ interface ShippingAddress {
 export default function OrderConfirmationPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { data: order, isLoading, error } = useOrder(orderId || '');
+  const { data: storeSettings } = useStoreSettings();
   const printRef = useRef<HTMLDivElement>(null);
+
+  const storeName = storeSettings?.store_name || 'Gupta Traders';
+  const storePhone = storeSettings?.store_phone || '+91 98765 43210';
+  const storeAddress = storeSettings?.store_address || '123 Furniture Lane, Sector 45, Gurugram, Haryana 122001';
+  const gstNumber = storeSettings?.gst_number || 'GSTIN: 06XXXXX1234X1ZX';
 
   const getShippingAddress = (): ShippingAddress => {
     return (order?.shipping_address as ShippingAddress) || {};
@@ -43,9 +49,10 @@ export default function OrderConfirmationPage() {
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
               body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-              .header { text-align: center; margin-bottom: 30px; }
+              .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
               .header h1 { font-size: 24px; margin-bottom: 8px; }
-              .header p { color: #666; }
+              .header .contact { color: #666; font-size: 12px; margin-top: 8px; }
+              .header .gst { font-size: 11px; color: #888; margin-top: 4px; }
               .section { margin-bottom: 24px; }
               .section-title { font-weight: 600; margin-bottom: 12px; font-size: 14px; text-transform: uppercase; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px; }
               .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -61,6 +68,9 @@ export default function OrderConfirmationPage() {
               .summary-total { font-size: 18px; font-weight: 600; border-top: 2px solid #333; padding-top: 12px; margin-top: 12px; }
               .status-badge { display: inline-block; padding: 4px 12px; background: #fef3c7; color: #92400e; border-radius: 4px; font-size: 12px; font-weight: 500; }
               .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 20px; }
+              .store-footer { margin-top: 30px; padding-top: 20px; border-top: 2px solid #333; text-align: center; }
+              .store-footer h4 { font-size: 14px; margin-bottom: 8px; }
+              .store-footer p { font-size: 12px; color: #666; }
               @media print { body { padding: 20px; } }
             </style>
           </head>
@@ -123,10 +133,16 @@ export default function OrderConfirmationPage() {
         {/* Order Slip - Printable */}
         <Card className="mb-6">
           <CardContent className="p-6" ref={printRef}>
-            {/* Header */}
+            {/* Header with Store Info */}
             <div className="header text-center mb-6">
-              <h1 className="text-2xl font-bold">Gupta Traders</h1>
+              <h1 className="text-2xl font-bold">{storeName}</h1>
               <p className="text-muted-foreground">Order Confirmation Slip</p>
+              <p className="contact text-sm text-muted-foreground mt-2">
+                Phone: {storePhone}
+              </p>
+              <p className="gst text-xs text-muted-foreground">
+                {gstNumber}
+              </p>
             </div>
 
             {/* Order Info */}
@@ -252,11 +268,16 @@ export default function OrderConfirmationPage() {
               </div>
             </div>
 
-            {/* Footer */}
+            {/* Footer with Store Address */}
             <div className="footer text-center mt-8 pt-6 border-t text-sm text-muted-foreground">
               <p className="font-medium mb-1">Payment Method: Manual Confirmation</p>
               <p>Our team will contact you to confirm your order and collect payment.</p>
-              <p className="mt-4">Thank you for shopping with Gupta Traders!</p>
+            </div>
+
+            <div className="store-footer text-center mt-6 pt-4 border-t-2">
+              <h4 className="font-semibold text-sm mb-2">{storeName}</h4>
+              <p className="text-xs text-muted-foreground">{storeAddress}</p>
+              <p className="text-xs text-muted-foreground mt-1">Phone: {storePhone}</p>
             </div>
           </CardContent>
         </Card>

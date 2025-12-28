@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useCustomers, useUpdateCustomer } from '@/hooks/useAdmin';
-import { Search, Users, ShieldOff, Shield, Eye } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { Search, Users, ShieldOff, Shield, Eye, Mail } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -31,17 +32,63 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
 import { formatPrice } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+
+interface Customer {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  phone: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  is_blocked: boolean;
+  created_at: string;
+  order_count: number;
+  total_spent: number;
+}
 
 export default function AdminCustomers() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const { toast } = useToast();
 
-  const { data: customers = [], isLoading } = useCustomers();
-  const updateCustomer = useUpdateCustomer();
+  // Fetch all customers with their order stats
+  const { data: customers = [], isLoading, refetch } = useQuery({
+    queryKey: ['admin-customers'],
+    queryFn: async () => {
+      // First get all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Then get order counts for each user
+      const customersWithStats = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          const { data: orders } = await supabase
+            .from('orders')
+            .select('total_amount')
+            .eq('user_id', profile.user_id);
+
+          const orderCount = orders?.length || 0;
+          const totalSpent = orders?.reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
+
+          return {
+            ...profile,
+            email: null, // We don't have direct access to auth.users email
+            order_count: orderCount,
+            total_spent: totalSpent,
+          };
+        })
+      );
+
+      return customersWithStats as Customer[];
+    },
+  });
 
   const { data: customerOrders = [] } = useQuery({
     queryKey: ['customer-orders', selectedCustomer?.user_id],
@@ -63,14 +110,29 @@ export default function AdminCustomers() {
          c.phone?.includes(searchQuery)
   );
 
-  const handleToggleBlock = async (customer: any) => {
-    await updateCustomer.mutateAsync({ 
-      id: customer.id, 
-      is_blocked: !customer.is_blocked 
-    });
+  const handleToggleBlock = async (customer: Customer) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_blocked: !customer.is_blocked })
+        .eq('id', customer.id);
+
+      if (error) throw error;
+      
+      toast({ 
+        title: customer.is_blocked ? 'Customer unblocked' : 'Customer blocked' 
+      });
+      refetch();
+    } catch (error: any) {
+      toast({ 
+        title: 'Error updating customer', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    }
   };
 
-  const handleViewDetails = (customer: any) => {
+  const handleViewDetails = (customer: Customer) => {
     setSelectedCustomer(customer);
     setDetailsOpen(true);
   };
@@ -114,6 +176,7 @@ export default function AdminCustomers() {
                       <TableHead>Customer</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead className="text-center">Orders</TableHead>
+                      <TableHead className="text-right">Total Spent</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                       <TableHead>Joined</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -139,8 +202,11 @@ export default function AdminCustomers() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="secondary">
-                            {customer.order_count || 0} orders
+                            {customer.order_count} orders
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatPrice(customer.total_spent)}
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant={customer.is_blocked ? 'destructive' : 'default'}>
@@ -240,8 +306,19 @@ export default function AdminCustomers() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Total Orders</p>
+                  <p className="text-2xl font-bold">{selectedCustomer.order_count}</p>
+                </div>
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Total Spent</p>
+                  <p className="text-2xl font-bold">{formatPrice(selectedCustomer.total_spent)}</p>
+                </div>
+              </div>
+
               <div>
-                <h4 className="font-medium mb-3">Order History ({customerOrders.length})</h4>
+                <h4 className="font-medium mb-3">Order History</h4>
                 {customerOrders.length > 0 ? (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {customerOrders.map((order: any) => (

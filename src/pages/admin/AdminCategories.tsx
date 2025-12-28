@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,12 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useProducts';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
   Search,
   Tag,
   Edit,
-  Trash2
+  Trash2,
+  Upload,
+  Image
 } from 'lucide-react';
 import {
   Table,
@@ -65,6 +69,9 @@ export default function AdminCategories() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [formData, setFormData] = useState<CategoryFormData>(defaultFormData);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const { data: categories = [], isLoading } = useCategories();
   const createCategory = useCreateCategory();
@@ -96,6 +103,34 @@ export default function AdminCategories() {
       sort_order: String(category.sort_order || 0),
     });
     setIsDialogOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `category-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('category-images')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('category-images')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, image_url: publicUrl }));
+      toast({ title: 'Image uploaded successfully' });
+    } catch (error: any) {
+      toast({ title: 'Error uploading image', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -175,13 +210,17 @@ export default function AdminCategories() {
                       <TableRow key={category.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            {category.image_url && (
+                            {category.image_url ? (
                               <div className="h-10 w-10 bg-muted rounded overflow-hidden">
                                 <img 
                                   src={category.image_url} 
                                   alt={category.name}
                                   className="h-full w-full object-cover"
                                 />
+                              </div>
+                            ) : (
+                              <div className="h-10 w-10 bg-muted rounded flex items-center justify-center">
+                                <Image className="h-5 w-5 text-muted-foreground" />
                               </div>
                             )}
                             <span className="font-medium">{category.name}</span>
@@ -297,13 +336,43 @@ export default function AdminCategories() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="image_url">Image URL</Label>
-              <Input
-                id="image_url"
-                placeholder="https://..."
-                value={formData.image_url}
-                onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-              />
+              <Label>Category Image</Label>
+              <div className="flex items-center gap-4">
+                {formData.image_url ? (
+                  <div className="h-20 w-20 bg-muted rounded-lg overflow-hidden">
+                    <img 
+                      src={formData.image_url} 
+                      alt="Category" 
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center">
+                    <Image className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploading ? 'Uploading...' : 'Upload Image'}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    PNG, JPG up to 2MB
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

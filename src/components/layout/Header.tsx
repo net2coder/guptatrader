@@ -15,6 +15,7 @@ import {
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { categories } from '@/data/products';
 
@@ -24,6 +25,7 @@ export function Header() {
   const { getCartCount } = useCart();
   const { getWishlistCount } = useWishlist();
   const { user, profile, isAdmin, signOut } = useAuth();
+  const { data: storeSettings } = useStoreSettings();
   const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -37,6 +39,8 @@ export function Header() {
 
   const cartCount = getCartCount();
   const wishlistCount = getWishlistCount();
+  const storeName = storeSettings?.store_name || 'Gupta Traders';
+  const logoUrl = storeSettings?.site_logo_url;
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
@@ -84,9 +88,17 @@ export function Header() {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <span className="font-display text-xl md:text-2xl font-bold text-primary">
-              Gupta Traders
-            </span>
+            {logoUrl ? (
+              <img 
+                src={logoUrl} 
+                alt={storeName} 
+                className="h-8 md:h-10 max-w-[150px] object-contain"
+              />
+            ) : (
+              <span className="font-display text-xl md:text-2xl font-bold text-primary">
+                {storeName}
+              </span>
+            )}
           </Link>
 
           {/* Desktop navigation */}
@@ -168,6 +180,10 @@ export function Header() {
                     <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <User className="h-4 w-4 mr-2" />
+                    My Profile
+                  </DropdownMenuItem>
                   {isAdmin && (
                     <>
                       <DropdownMenuItem onClick={() => navigate('/admin')}>

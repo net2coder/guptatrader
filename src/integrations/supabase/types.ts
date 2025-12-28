@@ -267,6 +267,39 @@ export type Database = {
         }
         Relationships: []
       }
+      footer_items: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          section: string
+          sort_order: number | null
+          title: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -727,6 +760,33 @@ export type Database = {
           per_kg_rate?: number | null
           regions?: string[]
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      store_settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          type: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          type?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          type?: string
+          updated_at?: string
+          value?: string | null
         }
         Relationships: []
       }
