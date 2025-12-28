@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Mail, Lock, User as UserIcon } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User as UserIcon, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/AuthContext';
 import { Layout } from '@/components/layout/Layout';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
 
 const signInSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -32,9 +33,18 @@ const forgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
 });
 
+const updatePasswordSchema = z.object({
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
 type SignInFormData = z.infer<typeof signInSchema>;
 type SignUpFormData = z.infer<typeof signUpSchema>;
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>;
 
 export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -42,11 +52,40 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState('signin');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
-  const { signIn, signUp, resetPassword, user, isLoading: authLoading } = useAuth();
+  const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
+  const [passwordUpdateSuccess, setPasswordUpdateSuccess] = useState(false);
+  const { signIn, signUp, resetPassword, updatePassword, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Check for password reset mode from URL or auth event
+  useEffect(() => {
+    const checkForPasswordReset = async () => {
+      // Check URL hash for recovery token (Supabase appends this)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const type = hashParams.get('type');
+      
+      if (type === 'recovery') {
+        setIsPasswordResetMode(true);
+        return;
+      }
+
+      // Also listen for PASSWORD_RECOVERY event
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordResetMode(true);
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    };
+
+    checkForPasswordReset();
+  }, []);
 
   useEffect(() => {
-    if (!authLoading && user) {
+    // Only redirect if user is logged in AND not in password reset mode
+    if (!authLoading && user && !isPasswordResetMode) {
       navigate('/');
     }
   }, [user, authLoading, navigate]);
@@ -73,6 +112,14 @@ export default function AuthPage() {
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: '',
+    },
+  });
+
+  const updatePasswordForm = useForm<UpdatePasswordFormData>({
+    resolver: zodResolver(updatePasswordSchema),
+    defaultValues: {
+      password: '',
+      confirmPassword: '',
     },
   });
 
@@ -122,11 +169,145 @@ export default function AuthPage() {
     forgotPasswordForm.reset();
   };
 
+  const handleUpdatePassword = async (data: UpdatePasswordFormData) => {
+    setIsLoading(true);
+    const { error } = await updatePassword(data.password);
+    setIsLoading(false);
+
+    if (error) {
+      updatePasswordForm.setError('root', {
+        message: 'Unable to update password. Please try again.',
+      });
+    } else {
+      setPasswordUpdateSuccess(true);
+    }
+  };
+
+  const handlePasswordUpdateComplete = () => {
+    setIsPasswordResetMode(false);
+    setPasswordUpdateSuccess(false);
+    // Clear the hash from URL
+    window.history.replaceState(null, '', window.location.pathname);
+    navigate('/');
+  };
+
   if (authLoading) {
     return (
       <Layout>
         <div className="min-h-[60vh] flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  // Show password update form when in reset mode
+  if (isPasswordResetMode) {
+    return (
+      <Layout>
+        <div className="min-h-[80vh] flex items-center justify-center py-12 px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full max-w-md"
+          >
+            <Card className="border-border/50 shadow-elegant">
+              <CardHeader className="text-center pb-4">
+                <CardTitle className="font-display text-2xl">
+                  {passwordUpdateSuccess ? 'Password Updated!' : 'Set New Password'}
+                </CardTitle>
+                <CardDescription>
+                  {passwordUpdateSuccess 
+                    ? 'Your password has been successfully updated'
+                    : 'Enter your new password below'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {passwordUpdateSuccess ? (
+                  <div className="text-center space-y-4">
+                    <div className="flex justify-center">
+                      <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                        <CheckCircle className="h-8 w-8 text-green-600" />
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground">
+                      You can now sign in with your new password.
+                    </p>
+                    <Button 
+                      className="w-full"
+                      onClick={handlePasswordUpdateComplete}
+                    >
+                      Continue to Home
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={updatePasswordForm.handleSubmit(handleUpdatePassword)} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="new-password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          className="pl-10 pr-10"
+                          {...updatePasswordForm.register('password')}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      {updatePasswordForm.formState.errors.password && (
+                        <p className="text-sm text-destructive">
+                          {updatePasswordForm.formState.errors.password.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="confirm-new-password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          className="pl-10"
+                          {...updatePasswordForm.register('confirmPassword')}
+                        />
+                      </div>
+                      {updatePasswordForm.formState.errors.confirmPassword && (
+                        <p className="text-sm text-destructive">
+                          {updatePasswordForm.formState.errors.confirmPassword.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {updatePasswordForm.formState.errors.root && (
+                      <p className="text-sm text-destructive text-center p-3 bg-destructive/10 rounded-lg">
+                        {updatePasswordForm.formState.errors.root.message}
+                      </p>
+                    )}
+
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? 'Updating...' : 'Update Password'}
+                    </Button>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </Layout>
     );
