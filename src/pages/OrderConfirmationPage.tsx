@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useOrder } from '@/hooks/useOrders';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { formatPrice } from '@/lib/utils';
+import { escapeHtml } from '@/lib/sanitize';
 
 interface ShippingAddress {
   full_name?: string;
@@ -38,14 +39,16 @@ export default function OrderConfirmationPage() {
 
   const handlePrint = () => {
     if (printRef.current) {
-      const printContent = printRef.current.innerHTML;
+      // Clone the print content and sanitize any dynamic data before printing
+      const printContainer = printRef.current.cloneNode(true) as HTMLElement;
+      const printContent = printContainer.innerHTML;
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write(`
           <!DOCTYPE html>
           <html>
           <head>
-            <title>Order Slip - ${order?.order_number}</title>
+            <title>Order Slip - ${escapeHtml(order?.order_number)}</title>
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
               body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
