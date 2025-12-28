@@ -4,23 +4,26 @@ import { Trash2, Minus, Plus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
+import { formatPrice } from '@/lib/utils';
 
 export default function CartPage() {
-  const { getCartItems, updateQuantity, removeFromCart, getCartTotal, clearCart } =
+  const { getCartItems, updateQuantity, removeFromCart, getCartTotal, clearCart, isLoading } =
     useCart();
   const cartItems = getCartItems();
   const cartTotal = getCartTotal();
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
-
   const deliveryCharge = cartTotal >= 10000 ? 0 : 999;
   const totalWithDelivery = cartTotal + deliveryCharge;
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-16 flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </Layout>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -75,12 +78,12 @@ export default function CartPage() {
                 <div className="flex gap-4 md:gap-6">
                   {/* Image */}
                   <Link
-                    to={`/product/${item.product.slug}`}
+                    to={`/product/${item.product?.slug}`}
                     className="flex-shrink-0"
                   >
                     <img
-                      src={item.product.images[0]}
-                      alt={item.product.name}
+                      src={item.product?.images?.[0]?.image_url || '/placeholder.svg'}
+                      alt={item.product?.name}
                       className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-lg"
                     />
                   </Link>
@@ -88,23 +91,24 @@ export default function CartPage() {
                   {/* Details */}
                   <div className="flex-1 min-w-0">
                     <Link
-                      to={`/product/${item.product.slug}`}
+                      to={`/product/${item.product?.slug}`}
                       className="font-semibold text-lg hover:text-primary transition-colors line-clamp-2"
                     >
-                      {item.product.name}
+                      {item.product?.name}
                     </Link>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {item.product.category} • {item.product.material}
+                      {item.product?.category?.name}
+                      {item.product?.material && ` • ${item.product.material}`}
                     </p>
 
                     {/* Price */}
                     <div className="flex items-baseline gap-2 mt-2">
                       <span className="font-semibold">
-                        {formatPrice(item.product.price)}
+                        {formatPrice(item.product?.price || 0)}
                       </span>
-                      {item.product.originalPrice && (
+                      {item.product?.compare_at_price && (
                         <span className="text-sm text-muted-foreground line-through">
-                          {formatPrice(item.product.originalPrice)}
+                          {formatPrice(item.product.compare_at_price)}
                         </span>
                       )}
                     </div>
@@ -132,7 +136,7 @@ export default function CartPage() {
                           onClick={() =>
                             updateQuantity(item.productId, item.quantity + 1)
                           }
-                          disabled={item.quantity >= item.product.stockQuantity}
+                          disabled={item.quantity >= (item.product?.stock_quantity || 0)}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
@@ -154,7 +158,7 @@ export default function CartPage() {
                   <div className="hidden md:block text-right">
                     <p className="text-sm text-muted-foreground">Subtotal</p>
                     <p className="text-lg font-semibold">
-                      {formatPrice(item.product.price * item.quantity)}
+                      {formatPrice((item.product?.price || 0) * item.quantity)}
                     </p>
                   </div>
                 </div>
@@ -212,9 +216,11 @@ export default function CartPage() {
                 <span>{formatPrice(totalWithDelivery)}</span>
               </div>
 
-              <Button className="w-full" size="lg">
-                Proceed to Checkout
-                <ArrowRight className="ml-2 h-5 w-5" />
+              <Button className="w-full" size="lg" asChild>
+                <Link to="/checkout">
+                  Proceed to Checkout
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
               </Button>
 
               <p className="text-xs text-muted-foreground text-center mt-4">
