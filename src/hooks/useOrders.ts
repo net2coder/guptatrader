@@ -207,10 +207,14 @@ export function useCreateOrder() {
       items,
       shippingAddress,
       guestEmail,
+      discountAmount,
+      couponCode,
     }: {
       items: { productId: string; quantity: number; name: string; sku?: string; price: number }[];
       shippingAddress: Order['shipping_address'];
       guestEmail?: string;
+      discountAmount?: number;
+      couponCode?: string;
     }) => {
       // Prepare items for the RPC function
       const itemsJsonb = items.map(item => ({
@@ -224,6 +228,8 @@ export function useCreateOrder() {
         p_guest_email: guestEmail || null,
         p_shipping_address: shippingAddress,
         p_items: itemsJsonb,
+        p_discount_amount: discountAmount || 0,
+        p_coupon_code: couponCode || null,
       });
 
       if (error) throw error;

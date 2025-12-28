@@ -4,7 +4,7 @@ import { Sofa, BedDouble, UtensilsCrossed, Armchair, Archive, Briefcase, LucideI
 import { useCategories } from '@/hooks/useProducts';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Default icons for common category names
+// Default icons for common category names (fallback when no image)
 const categoryIcons: Record<string, LucideIcon> = {
   'sofas': Sofa,
   'beds': BedDouble,
@@ -73,6 +73,7 @@ export function CategorySection() {
           {displayCategories.map((category, index) => {
             const IconComponent = categoryIcons[category.slug.toLowerCase()] || Sofa;
             const bgColor = categoryColors[category.slug.toLowerCase()] || 'bg-gray-100';
+            const hasImage = !!category.image_url;
 
             return (
               <motion.div
@@ -88,9 +89,17 @@ export function CategorySection() {
                 >
                   <div className="bg-card rounded-xl p-6 text-center card-shadow hover:card-shadow-hover transition-all duration-300 hover:-translate-y-1">
                     <div
-                      className={`w-16 h-16 mx-auto mb-4 rounded-full ${bgColor} flex items-center justify-center transition-transform duration-300 group-hover:scale-110`}
+                      className={`w-16 h-16 mx-auto mb-4 rounded-full ${!hasImage ? bgColor : ''} flex items-center justify-center transition-transform duration-300 group-hover:scale-110 overflow-hidden`}
                     >
-                      <IconComponent className="w-7 h-7 text-foreground/70" />
+                      {hasImage ? (
+                        <img 
+                          src={category.image_url!} 
+                          alt={category.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <IconComponent className="w-7 h-7 text-foreground/70" />
+                      )}
                     </div>
                     <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
                       {category.name}

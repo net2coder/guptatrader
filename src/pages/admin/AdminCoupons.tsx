@@ -69,6 +69,7 @@ export default function AdminCoupons() {
     starts_at: '',
     expires_at: '',
     is_active: true,
+    is_announcement: false,
   });
 
   const filteredCoupons = coupons.filter(
@@ -88,6 +89,7 @@ export default function AdminCoupons() {
       starts_at: '',
       expires_at: '',
       is_active: true,
+      is_announcement: false,
     });
     setEditingCoupon(null);
   };
@@ -105,6 +107,7 @@ export default function AdminCoupons() {
       starts_at: coupon.starts_at ? coupon.starts_at.split('T')[0] : '',
       expires_at: coupon.expires_at ? coupon.expires_at.split('T')[0] : '',
       is_active: coupon.is_active,
+      is_announcement: coupon.is_announcement || false,
     });
     setIsDialogOpen(true);
   };
@@ -121,6 +124,7 @@ export default function AdminCoupons() {
       starts_at: formData.starts_at ? new Date(formData.starts_at).toISOString() : null,
       expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
       is_active: formData.is_active,
+      is_announcement: formData.is_announcement,
     };
 
     if (editingCoupon) {
@@ -259,6 +263,16 @@ export default function AdminCoupons() {
                   <Switch
                     checked={formData.is_active}
                     onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Show as Announcement</Label>
+                    <p className="text-xs text-muted-foreground">Display this coupon in the promo banner on the homepage</p>
+                  </div>
+                  <Switch
+                    checked={formData.is_announcement}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_announcement: checked })}
                   />
                 </div>
               </div>

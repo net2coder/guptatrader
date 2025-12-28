@@ -226,6 +226,7 @@ export type Database = {
           expires_at: string | null
           id: string
           is_active: boolean | null
+          is_announcement: boolean | null
           maximum_discount: number | null
           minimum_order_amount: number | null
           starts_at: string | null
@@ -242,6 +243,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_announcement?: boolean | null
           maximum_discount?: number | null
           minimum_order_amount?: number | null
           starts_at?: string | null
@@ -258,6 +260,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_announcement?: boolean | null
           maximum_discount?: number | null
           minimum_order_amount?: number | null
           starts_at?: string | null
@@ -854,15 +857,27 @@ export type Database = {
         }
         Returns: string
       }
-      create_order_with_items: {
-        Args: {
-          p_guest_email: string
-          p_items: Json
-          p_shipping_address: Json
-          p_user_id: string
-        }
-        Returns: string
-      }
+      create_order_with_items:
+        | {
+            Args: {
+              p_guest_email: string
+              p_items: Json
+              p_shipping_address: Json
+              p_user_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_coupon_code?: string
+              p_discount_amount?: number
+              p_guest_email: string
+              p_items: Json
+              p_shipping_address: Json
+              p_user_id: string
+            }
+            Returns: string
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

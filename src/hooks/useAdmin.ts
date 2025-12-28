@@ -82,6 +82,7 @@ export interface Coupon {
   starts_at: string | null;
   expires_at: string | null;
   is_active: boolean;
+  is_announcement: boolean;
   created_at: string;
   updated_at: string;
 }

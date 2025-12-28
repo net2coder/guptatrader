@@ -206,6 +206,8 @@ export default function CheckoutPage() {
         items: orderItems,
         shippingAddress,
         guestEmail: user ? undefined : guestEmail,
+        discountAmount: discountAmount,
+        couponCode: appliedCoupon?.valid ? couponCode.toUpperCase() : undefined,
       });
 
       // Clear cart after successful order
