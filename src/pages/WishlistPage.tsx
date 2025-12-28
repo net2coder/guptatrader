@@ -1,16 +1,39 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
+import { Heart, ShoppingCart, Trash2, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useWishlist } from '@/context/WishlistContext';
 import { useCart } from '@/context/CartContext';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function WishlistPage() {
-  const { getWishlistItems, removeFromWishlist } = useWishlist();
+  const { items, removeFromWishlist } = useWishlist();
   const { addToCart, isInCart } = useCart();
-  const wishlistItems = getWishlistItems();
+
+  // Fetch wishlist products from Supabase
+  const { data: wishlistProducts = [], isLoading } = useQuery({
+    queryKey: ['wishlist-products', items],
+    queryFn: async () => {
+      if (items.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          category:categories(id, name, slug),
+          images:product_images(id, image_url, alt_text, is_primary, sort_order)
+        `)
+        .in('id', items)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: items.length > 0,
+  });
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -30,7 +53,23 @@ export default function WishlistPage() {
     toast.success(`${productName} removed from wishlist`);
   };
 
-  if (wishlistItems.length === 0) {
+  const getPrimaryImage = (product: typeof wishlistProducts[0]) => {
+    const images = product.images || [];
+    const primaryImage = images.find((img: { is_primary: boolean }) => img.is_primary);
+    return primaryImage?.image_url || images[0]?.image_url || '/placeholder.svg';
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-16 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (items.length === 0 || wishlistProducts.length === 0) {
     return (
       <Layout>
         <div className="container py-16 text-center">
@@ -63,11 +102,11 @@ export default function WishlistPage() {
           animate={{ opacity: 1, y: 0 }}
           className="font-display text-3xl md:text-4xl font-bold mb-8"
         >
-          My Wishlist ({wishlistItems.length} items)
+          My Wishlist ({wishlistProducts.length} items)
         </motion.h1>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {wishlistItems.map((product, index) => (
+          {wishlistProducts.map((product, index) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 20 }}
@@ -78,7 +117,7 @@ export default function WishlistPage() {
               <Link to={`/product/${product.slug}`}>
                 <div className="aspect-square bg-secondary">
                   <img
-                    src={product.images[0]}
+                    src={getPrimaryImage(product)}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
@@ -93,16 +132,16 @@ export default function WishlistPage() {
                   {product.name}
                 </Link>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {product.category}
+                  {product.category?.name || 'Uncategorized'}
                 </p>
 
                 <div className="flex items-baseline gap-2 mt-2">
                   <span className="font-semibold">
                     {formatPrice(product.price)}
                   </span>
-                  {product.originalPrice && (
+                  {product.compare_at_price && (
                     <span className="text-sm text-muted-foreground line-through">
-                      {formatPrice(product.originalPrice)}
+                      {formatPrice(product.compare_at_price)}
                     </span>
                   )}
                 </div>
@@ -112,7 +151,7 @@ export default function WishlistPage() {
                     className="flex-1"
                     size="sm"
                     onClick={() => handleAddToCart(product.id, product.name)}
-                    disabled={!product.inStock}
+                    disabled={product.stock_quantity <= 0}
                   >
                     <ShoppingCart className="h-4 w-4 mr-1" />
                     {isInCart(product.id) ? 'In Cart' : 'Add to Cart'}

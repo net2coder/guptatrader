@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Product, getProductById } from '@/data/products';
 
 interface WishlistContextType {
   items: string[];
@@ -7,7 +6,6 @@ interface WishlistContextType {
   removeFromWishlist: (productId: string) => void;
   toggleWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
-  getWishlistItems: () => Product[];
   getWishlistCount: () => number;
 }
 
@@ -51,12 +49,6 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     return items.includes(productId);
   };
 
-  const getWishlistItems = () => {
-    return items
-      .map(id => getProductById(id))
-      .filter((product): product is Product => product !== undefined);
-  };
-
   const getWishlistCount = () => items.length;
 
   return (
@@ -67,7 +59,6 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         removeFromWishlist,
         toggleWishlist,
         isInWishlist,
-        getWishlistItems,
         getWishlistCount,
       }}
     >
