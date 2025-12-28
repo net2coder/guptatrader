@@ -82,6 +82,56 @@ export function Header() {
                 >
                   All Products
                 </Link>
+
+                {/* Mobile Auth Section */}
+                <div className="border-t border-border pt-4 mt-4">
+                  {user ? (
+                    <>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary">
+                            {profile?.full_name?.charAt(0) || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{profile?.full_name || 'User'}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                        </div>
+                      </div>
+                      <Link
+                        to="/profile"
+                        className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
+                      >
+                        <User className="h-5 w-5" />
+                        My Profile
+                      </Link>
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors mt-3"
+                        >
+                          <Settings className="h-5 w-5" />
+                          Admin Panel
+                        </Link>
+                      )}
+                      <button
+                        onClick={signOut}
+                        className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors mt-3 text-destructive"
+                      >
+                        <LogOut className="h-5 w-5" />
+                        Sign Out
+                      </button>
+                    </>
+                  ) : (
+                    <Link
+                      to="/auth"
+                      className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
+                    >
+                      <User className="h-5 w-5" />
+                      Sign In / Sign Up
+                    </Link>
+                  )}
+                </div>
               </nav>
             </SheetContent>
           </Sheet>
