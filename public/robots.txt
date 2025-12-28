@@ -1,8 +1,19 @@
+# Gupta Traders - Robots.txt
+# https://www.guptatraders.net
+
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /profile
+Disallow: /checkout
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /profile
+Disallow: /checkout
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +23,15 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /auth
+Disallow: /profile
+Disallow: /checkout
+Disallow: /order-confirmation
+
+# Sitemap
+Sitemap: https://www.guptatraders.net/sitemap.xml
+
+# Host
+Host: https://www.guptatraders.net
