@@ -41,6 +41,7 @@ import {
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/lib/utils';
+import { escapeHtml } from '@/lib/sanitize';
 
 interface Address {
   id: string;
@@ -284,7 +285,7 @@ export default function ProfilePage() {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Order Slip - ${order.order_number}</title>
+          <title>Order Slip - ${escapeHtml(order.order_number)}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
@@ -309,18 +310,18 @@ export default function ProfilePage() {
           </div>
           <div class="grid">
             <div>
-              <p><strong>Order Number:</strong> ${order.order_number}</p>
-              <p><strong>Date:</strong> ${format(new Date(order.created_at), 'PPP')}</p>
-              <p><strong>Status:</strong> ${order.status.toUpperCase()}</p>
-              <p><strong>Payment:</strong> ${order.payment_status.toUpperCase()}</p>
+              <p><strong>Order Number:</strong> ${escapeHtml(order.order_number)}</p>
+              <p><strong>Date:</strong> ${escapeHtml(format(new Date(order.created_at), 'PPP'))}</p>
+              <p><strong>Status:</strong> ${escapeHtml(order.status?.toUpperCase())}</p>
+              <p><strong>Payment:</strong> ${escapeHtml(order.payment_status?.toUpperCase())}</p>
             </div>
             <div>
               <p><strong>Ship To:</strong></p>
-              <p>${address.full_name}</p>
-              <p>${address.address_line_1}</p>
-              ${address.address_line_2 ? `<p>${address.address_line_2}</p>` : ''}
-              <p>${address.city}, ${address.state} ${address.postal_code}</p>
-              <p>Phone: ${address.phone}</p>
+              <p>${escapeHtml(address.full_name)}</p>
+              <p>${escapeHtml(address.address_line_1)}</p>
+              ${address.address_line_2 ? `<p>${escapeHtml(address.address_line_2)}</p>` : ''}
+              <p>${escapeHtml(address.city)}, ${escapeHtml(address.state)} ${escapeHtml(address.postal_code)}</p>
+              <p>Phone: ${escapeHtml(address.phone)}</p>
             </div>
           </div>
           <div class="section">
@@ -330,8 +331,8 @@ export default function ProfilePage() {
               <tbody>
                 ${order.items?.map((item: any) => `
                   <tr>
-                    <td>${item.product_name}</td>
-                    <td>${item.quantity}</td>
+                    <td>${escapeHtml(item.product_name)}</td>
+                    <td>${escapeHtml(String(item.quantity))}</td>
                     <td class="text-right">₹${Number(item.unit_price).toLocaleString()}</td>
                     <td class="text-right">₹${Number(item.total_price).toLocaleString()}</td>
                   </tr>
