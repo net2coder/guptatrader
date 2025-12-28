@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAdminOrders, useUpdateOrderStatus, OrderStatus, PaymentStatus } from '@/hooks/useOrders';
 import { formatPrice } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Search, 
   ShoppingCart,
@@ -81,9 +83,10 @@ export default function AdminOrders() {
   const [trackingNumber, setTrackingNumber] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
 
-  const { data: orders = [], isLoading } = useAdminOrders();
+  const { data: orders = [], isLoading, refetch } = useAdminOrders();
   const updateStatus = useUpdateOrderStatus();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const getShippingAddress = (order: any): ShippingAddress => {
     return (order.shipping_address as ShippingAddress) || {};
@@ -136,7 +139,6 @@ export default function AdminOrders() {
 
   const handleMarkPaid = async (orderId: string) => {
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
       const { error } = await supabase
         .from('orders')
         .update({ payment_status: 'paid' })
@@ -145,8 +147,9 @@ export default function AdminOrders() {
       if (error) throw error;
 
       toast({ title: 'Payment marked as received' });
-      // Refresh the order list
-      window.location.reload();
+      setSelectedOrder(null);
+      // Invalidate and refetch orders
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
     } catch (error) {
       toast({ 
         title: 'Error updating payment status', 

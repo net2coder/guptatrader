@@ -99,17 +99,40 @@ export function useAdminOrders() {
   return useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch orders with items (no foreign key join for profiles)
+      const { data: orders, error } = await supabase
         .from('orders')
         .select(`
           *,
-          items:order_items(*),
-          profile:profiles!orders_user_id_fkey(full_name, phone)
+          items:order_items(*)
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      
+      // Fetch profiles separately for orders with user_id
+      const userIds = orders
+        ?.filter(o => o.user_id)
+        .map(o => o.user_id) || [];
+      
+      let profilesMap: Record<string, { full_name: string | null; phone: string | null }> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, phone')
+          .in('user_id', userIds);
+        
+        profiles?.forEach(p => {
+          profilesMap[p.user_id] = { full_name: p.full_name, phone: p.phone };
+        });
+      }
+      
+      // Attach profiles to orders
+      return orders?.map(order => ({
+        ...order,
+        profile: order.user_id ? profilesMap[order.user_id] : null
+      })) || [];
     },
   });
 }
