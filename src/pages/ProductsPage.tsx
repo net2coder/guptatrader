@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Filter, SlidersHorizontal, ChevronDown, X } from 'lucide-react';
@@ -53,14 +53,26 @@ const roomTypes = [
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState<SortOption>('featured');
+  
+  // Get initial category from URL
+  const urlCategory = searchParams.get('category');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    searchParams.get('category') ? [searchParams.get('category')!] : []
+    urlCategory ? [urlCategory] : []
   );
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
 
   const searchQuery = searchParams.get('search')?.toLowerCase() || '';
+
+  // Sync category from URL when it changes (e.g., navigation from header)
+  useEffect(() => {
+    if (urlCategory && !selectedCategories.includes(urlCategory)) {
+      setSelectedCategories([urlCategory]);
+    } else if (!urlCategory && selectedCategories.length > 0) {
+      // URL category was cleared, but keep user's filter selections
+    }
+  }, [urlCategory]);
 
   // Fetch data from database
   const { data: products, isLoading: productsLoading } = useProducts({ search: searchQuery });
