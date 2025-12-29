@@ -1,7 +1,5 @@
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Instagram, Twitter } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { useFooterItems } from '@/hooks/useFooterItems';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 
@@ -22,29 +20,6 @@ export function Footer() {
 
   return (
     <footer className="bg-foreground text-background">
-      {/* Newsletter */}
-      <div className="border-b border-background/10">
-        <div className="container py-12">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h3 className="font-display text-2xl font-semibold mb-2">
-                Join Our Newsletter
-              </h3>
-              <p className="text-background/70">
-                Get updates on new arrivals and exclusive offers
-              </p>
-            </div>
-            <form className="flex gap-2 w-full md:w-auto">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                className="bg-background/10 border-background/20 text-background placeholder:text-background/50 min-w-[280px]"
-              />
-              <Button variant="secondary">Subscribe</Button>
-            </form>
-          </div>
-        </div>
-      </div>
 
       {/* Main footer */}
       <div className="container py-12 md:py-16">
