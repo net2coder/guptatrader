@@ -902,27 +902,30 @@ export type Database = {
         }
         Returns: string
       }
-      create_order_with_items:
-        | {
-            Args: {
-              p_guest_email: string
-              p_items: Json
-              p_shipping_address: Json
-              p_user_id: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_coupon_code?: string
-              p_discount_amount?: number
-              p_guest_email: string
-              p_items: Json
-              p_shipping_address: Json
-              p_user_id: string
-            }
-            Returns: string
-          }
+      create_order_with_items: {
+        Args: {
+          p_coupon_code?: string
+          p_discount_amount?: number
+          p_guest_email: string
+          p_items: Json
+          p_shipping_address: Json
+          p_user_id: string
+        }
+        Returns: string
+      }
+      get_coupon_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          code: string
+          discount_type: string
+          discount_value: number
+          expires_at: string
+          id: string
+          is_active: boolean
+          maximum_discount: number
+          minimum_order_amount: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -941,27 +944,14 @@ export type Database = {
         }
         Returns: string
       }
-      validate_coupon:
-        | {
-            Args: { p_code: string; p_order_subtotal: number }
-            Returns: {
-              discount_amount: number
-              message: string
-              valid: boolean
-            }[]
-          }
-        | {
-            Args: {
-              p_code: string
-              p_order_subtotal: number
-              p_user_id?: string
-            }
-            Returns: {
-              discount_amount: number
-              message: string
-              valid: boolean
-            }[]
-          }
+      validate_coupon: {
+        Args: { p_code: string; p_order_subtotal: number; p_user_id?: string }
+        Returns: {
+          discount_amount: number
+          message: string
+          valid: boolean
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "customer"
