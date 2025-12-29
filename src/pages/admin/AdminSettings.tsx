@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   useShippingZones, 
   useCreateShippingZone, 
@@ -33,16 +34,16 @@ import {
   Bell,
   AlertCircle,
   Upload,
-  Image
+  Image,
+  Globe,
+  CreditCard,
+  Package,
+  Lock,
+  Activity,
+  Check,
+  ChevronRight,
+  MapPin
 } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -80,7 +81,6 @@ export default function AdminSettings() {
     is_active: true,
   });
 
-  // Local form state for store settings
   const [localSettings, setLocalSettings] = useState({
     store_name: '',
     store_email: '',
@@ -98,7 +98,6 @@ export default function AdminSettings() {
     twitter_url: '',
   });
 
-  // Sync local settings with fetched data
   useEffect(() => {
     if (storeSettings) {
       setLocalSettings({
@@ -202,11 +201,19 @@ export default function AdminSettings() {
     }
   };
 
+  const orderStatusFlow = [
+    { label: 'Pending', color: 'bg-yellow-500' },
+    { label: 'Confirmed', color: 'bg-blue-500' },
+    { label: 'Processing', color: 'bg-indigo-500' },
+    { label: 'Shipped', color: 'bg-purple-500' },
+    { label: 'Delivered', color: 'bg-emerald-500' },
+  ];
+
   if (settingsLoading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
         </div>
       </AdminLayout>
     );
@@ -214,126 +221,149 @@ export default function AdminSettings() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 admin-page-enter">
+        {/* Header */}
         <div>
-          <h1 className="text-3xl font-display font-bold">Settings</h1>
-          <p className="text-muted-foreground">Configure your store settings</p>
+          <h1 className="text-2xl font-display font-bold text-foreground">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">Configure your store preferences</p>
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="general" className="gap-2">
+          <TabsList className="flex flex-wrap gap-1 bg-muted/50 p-1 rounded-lg h-auto">
+            <TabsTrigger value="general" className="gap-2 data-[state=active]:bg-background text-xs sm:text-sm">
               <Store className="h-4 w-4" />
-              General
+              <span className="hidden sm:inline">General</span>
             </TabsTrigger>
-            <TabsTrigger value="orders" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Orders
+            <TabsTrigger value="orders" className="gap-2 data-[state=active]:bg-background text-xs sm:text-sm">
+              <Package className="h-4 w-4" />
+              <span className="hidden sm:inline">Orders</span>
             </TabsTrigger>
-            <TabsTrigger value="shipping" className="gap-2">
+            <TabsTrigger value="shipping" className="gap-2 data-[state=active]:bg-background text-xs sm:text-sm">
               <Truck className="h-4 w-4" />
-              Shipping
+              <span className="hidden sm:inline">Shipping</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-2">
+            <TabsTrigger value="notifications" className="gap-2 data-[state=active]:bg-background text-xs sm:text-sm">
               <Bell className="h-4 w-4" />
-              Notifications
+              <span className="hidden sm:inline">Notifications</span>
             </TabsTrigger>
-            <TabsTrigger value="security" className="gap-2">
+            <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-background text-xs sm:text-sm">
               <Shield className="h-4 w-4" />
-              Security
+              <span className="hidden sm:inline">Security</span>
             </TabsTrigger>
-            <TabsTrigger value="logs" className="gap-2">
+            <TabsTrigger value="logs" className="gap-2 data-[state=active]:bg-background text-xs sm:text-sm">
               <History className="h-4 w-4" />
-              Logs
+              <span className="hidden sm:inline">Logs</span>
             </TabsTrigger>
           </TabsList>
 
           {/* General Settings */}
-          <TabsContent value="general">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Store Information</CardTitle>
-                  <CardDescription>Basic store details and configuration</CardDescription>
+          <TabsContent value="general" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              {/* Store Information */}
+              <Card className="admin-card border-0">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                      <Store className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Store Information</CardTitle>
+                      <CardDescription className="text-xs">Basic store details and configuration</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="storeName">Store Name</Label>
+                      <Label className="text-xs font-medium">Store Name</Label>
                       <Input
-                        id="storeName"
                         value={localSettings.store_name}
                         onChange={(e) => setLocalSettings({ ...localSettings, store_name: e.target.value })}
+                        className="bg-muted/50 border-0"
+                        placeholder="Your Store Name"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="storeEmail">Store Email</Label>
+                      <Label className="text-xs font-medium">Store Email</Label>
                       <Input
-                        id="storeEmail"
                         type="email"
                         value={localSettings.store_email}
                         onChange={(e) => setLocalSettings({ ...localSettings, store_email: e.target.value })}
+                        className="bg-muted/50 border-0"
+                        placeholder="store@example.com"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="storePhone">Store Phone</Label>
+                      <Label className="text-xs font-medium">Store Phone</Label>
                       <Input
-                        id="storePhone"
                         value={localSettings.store_phone}
                         onChange={(e) => setLocalSettings({ ...localSettings, store_phone: e.target.value })}
+                        className="bg-muted/50 border-0"
+                        placeholder="+91 9876543210"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="gstNumber">GST Number</Label>
+                      <Label className="text-xs font-medium">GST Number</Label>
                       <Input
-                        id="gstNumber"
                         value={localSettings.gst_number}
                         onChange={(e) => setLocalSettings({ ...localSettings, gst_number: e.target.value })}
+                        className="bg-muted/50 border-0"
                         placeholder="GSTIN: 06XXXXX1234X1ZX"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                      <Label className="text-xs font-medium">Tax Rate (%)</Label>
                       <Input
-                        id="taxRate"
                         type="number"
                         value={localSettings.tax_rate}
                         onChange={(e) => setLocalSettings({ ...localSettings, tax_rate: e.target.value })}
+                        className="bg-muted/50 border-0"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="storeAddress">Store Address</Label>
+                    <Label className="text-xs font-medium">Store Address</Label>
                     <Textarea
-                      id="storeAddress"
                       value={localSettings.store_address}
                       onChange={(e) => setLocalSettings({ ...localSettings, store_address: e.target.value })}
                       rows={2}
+                      className="bg-muted/50 border-0 resize-none"
+                      placeholder="Full store address"
                     />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Site Logo</CardTitle>
-                  <CardDescription>Upload your store logo (displayed in header and invoices)</CardDescription>
+              {/* Site Logo */}
+              <Card className="admin-card border-0">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500">
+                      <Image className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Site Logo</CardTitle>
+                      <CardDescription className="text-xs">Upload your store logo (displayed in header and invoices)</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent>
                   <div className="flex items-center gap-4">
-                    {localSettings.site_logo_url ? (
-                      <div className="h-16 w-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                    <div className="h-20 w-32 bg-muted/50 rounded-xl flex items-center justify-center overflow-hidden">
+                      {localSettings.site_logo_url ? (
                         <img 
                           src={localSettings.site_logo_url} 
                           alt="Store Logo" 
                           className="max-h-full max-w-full object-contain"
                         />
-                      </div>
-                    ) : (
-                      <div className="h-16 w-32 bg-muted rounded-lg flex items-center justify-center">
-                        <Image className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                    )}
+                      ) : (
+                        <Image className="h-8 w-8 text-muted-foreground/50" />
+                      )}
+                    </div>
                     <div>
                       <input
                         ref={logoInputRef}
@@ -346,11 +376,12 @@ export default function AdminSettings() {
                         variant="outline" 
                         onClick={() => logoInputRef.current?.click()}
                         disabled={uploadingLogo}
+                        className="gap-2"
                       >
-                        <Upload className="h-4 w-4 mr-2" />
+                        <Upload className="h-4 w-4" />
                         {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
                       </Button>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-2">
                         Recommended: PNG or SVG, max 2MB
                       </p>
                     </div>
@@ -358,294 +389,365 @@ export default function AdminSettings() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Social Media Links</CardTitle>
-                  <CardDescription>Add your social media profile URLs (displayed in footer)</CardDescription>
+              {/* Social Media */}
+              <Card className="admin-card border-0">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-500">
+                      <Globe className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Social Media Links</CardTitle>
+                      <CardDescription className="text-xs">Add your social media profile URLs</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-3">
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-3">
                     <div className="space-y-2">
-                      <Label htmlFor="facebookUrl">Facebook URL</Label>
+                      <Label className="text-xs font-medium">Facebook</Label>
                       <Input
-                        id="facebookUrl"
                         placeholder="https://facebook.com/yourpage"
                         value={localSettings.facebook_url}
                         onChange={(e) => setLocalSettings({ ...localSettings, facebook_url: e.target.value })}
+                        className="bg-muted/50 border-0"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="instagramUrl">Instagram URL</Label>
+                      <Label className="text-xs font-medium">Instagram</Label>
                       <Input
-                        id="instagramUrl"
                         placeholder="https://instagram.com/yourprofile"
                         value={localSettings.instagram_url}
                         onChange={(e) => setLocalSettings({ ...localSettings, instagram_url: e.target.value })}
+                        className="bg-muted/50 border-0"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="twitterUrl">Twitter/X URL</Label>
+                      <Label className="text-xs font-medium">Twitter/X</Label>
                       <Input
-                        id="twitterUrl"
                         placeholder="https://x.com/yourhandle"
                         value={localSettings.twitter_url}
                         onChange={(e) => setLocalSettings({ ...localSettings, twitter_url: e.target.value })}
+                        className="bg-muted/50 border-0"
                       />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Button onClick={handleSaveStoreSettings} disabled={updateSettings.isPending}>
-                <Save className="h-4 w-4 mr-2" />
+              <Button onClick={handleSaveStoreSettings} disabled={updateSettings.isPending} className="gap-2">
+                <Save className="h-4 w-4" />
                 {updateSettings.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
-            </div>
+            </motion.div>
           </TabsContent>
 
           {/* Order Settings */}
           <TabsContent value="orders">
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Management</CardTitle>
-                <CardDescription>Configure order handling and automation</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h4 className="font-medium">Payment Method</h4>
-                      <p className="text-sm text-muted-foreground">Manual confirmation (no online payment)</p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card className="admin-card border-0">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
+                      <Package className="h-5 w-5" />
                     </div>
-                    <Badge>Manual</Badge>
+                    <div>
+                      <CardTitle className="text-base">Order Management</CardTitle>
+                      <CardDescription className="text-xs">Configure order handling and automation</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Payment Method */}
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-background">
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">Payment Method</h4>
+                        <p className="text-xs text-muted-foreground">Manual confirmation (no online payment)</p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary">Manual</Badge>
                   </div>
 
-                  <div className="p-4 border rounded-lg space-y-4">
-                    <div>
-                      <h4 className="font-medium">Auto-Cancel Pending Orders</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Automatically cancel orders that remain pending for too long
-                      </p>
+                  {/* Auto Cancel */}
+                  <div className="p-4 rounded-xl bg-muted/30 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-background">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">Auto-Cancel Pending Orders</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Automatically cancel orders that remain pending
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <Label htmlFor="autoCancelDays">Cancel after (days)</Label>
+                    <div className="flex items-center gap-4 pl-11">
+                      <Label className="text-xs">Cancel after</Label>
                       <Input
-                        id="autoCancelDays"
                         type="number"
                         value={localSettings.auto_cancel_days}
                         onChange={(e) => setLocalSettings({ ...localSettings, auto_cancel_days: e.target.value })}
-                        className="w-24"
+                        className="w-20 bg-background border-0"
                         min={1}
                         max={30}
                       />
-                    </div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      Orders pending for more than {localSettings.auto_cancel_days} days will be auto-cancelled
-                    </p>
-                  </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <h4 className="font-medium mb-2">Order Status Flow</h4>
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <Badge variant="outline">Pending</Badge>
-                      <span>→</span>
-                      <Badge variant="outline">Confirmed</Badge>
-                      <span>→</span>
-                      <Badge variant="outline">Processing</Badge>
-                      <span>→</span>
-                      <Badge variant="outline">Shipped</Badge>
-                      <span>→</span>
-                      <Badge variant="outline">Delivered</Badge>
+                      <span className="text-xs text-muted-foreground">days</span>
                     </div>
                   </div>
-                </div>
 
-                <Button onClick={handleSaveStoreSettings} disabled={updateSettings.isPending}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {updateSettings.isPending ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </CardContent>
-            </Card>
+                  {/* Order Status Flow */}
+                  <div className="p-4 rounded-xl bg-muted/30">
+                    <h4 className="font-medium text-sm mb-4">Order Status Flow</h4>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {orderStatusFlow.map((status, index) => (
+                        <div key={status.label} className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background">
+                            <div className={`w-2 h-2 rounded-full ${status.color}`} />
+                            <span className="text-xs font-medium">{status.label}</span>
+                          </div>
+                          {index < orderStatusFlow.length - 1 && (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button onClick={handleSaveStoreSettings} disabled={updateSettings.isPending} className="gap-2">
+                    <Save className="h-4 w-4" />
+                    {updateSettings.isPending ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
           </TabsContent>
 
           {/* Shipping Settings */}
           <TabsContent value="shipping">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Shipping Zones</CardTitle>
-                  <CardDescription>Configure delivery regions and rates</CardDescription>
-                </div>
-                <Dialog open={isZoneDialogOpen} onOpenChange={(open) => {
-                  setIsZoneDialogOpen(open);
-                  if (!open) resetZoneForm();
-                }}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Zone
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{editingZone ? 'Edit Shipping Zone' : 'Add Shipping Zone'}</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>Zone Name</Label>
-                        <Input
-                          value={zoneForm.name}
-                          onChange={(e) => setZoneForm({ ...zoneForm, name: e.target.value })}
-                          placeholder="e.g. North India"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Regions (comma separated)</Label>
-                        <Input
-                          value={zoneForm.regions}
-                          onChange={(e) => setZoneForm({ ...zoneForm, regions: e.target.value })}
-                          placeholder="Delhi, Punjab, Haryana"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Base Rate (₹)</Label>
-                          <Input
-                            type="number"
-                            value={zoneForm.base_rate}
-                            onChange={(e) => setZoneForm({ ...zoneForm, base_rate: Number(e.target.value) })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Per KG Rate (₹)</Label>
-                          <Input
-                            type="number"
-                            value={zoneForm.per_kg_rate}
-                            onChange={(e) => setZoneForm({ ...zoneForm, per_kg_rate: Number(e.target.value) })}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Free Shipping Threshold (₹)</Label>
-                        <Input
-                          type="number"
-                          value={zoneForm.free_shipping_threshold}
-                          onChange={(e) => setZoneForm({ ...zoneForm, free_shipping_threshold: Number(e.target.value) })}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Min Delivery Days</Label>
-                          <Input
-                            type="number"
-                            value={zoneForm.estimated_days_min}
-                            onChange={(e) => setZoneForm({ ...zoneForm, estimated_days_min: Number(e.target.value) })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Max Delivery Days</Label>
-                          <Input
-                            type="number"
-                            value={zoneForm.estimated_days_max}
-                            onChange={(e) => setZoneForm({ ...zoneForm, estimated_days_max: Number(e.target.value) })}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <Label>Active</Label>
-                        <Switch
-                          checked={zoneForm.is_active}
-                          onCheckedChange={(checked) => setZoneForm({ ...zoneForm, is_active: checked })}
-                        />
-                      </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card className="admin-card border-0">
+                <CardHeader className="pb-4 flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500">
+                      <Truck className="h-5 w-5" />
                     </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsZoneDialogOpen(false)}>Cancel</Button>
-                      <Button onClick={handleSaveZone} disabled={createZone.isPending || updateZone.isPending}>
-                        <Save className="h-4 w-4 mr-2" />
-                        {createZone.isPending || updateZone.isPending ? 'Saving...' : 'Save'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent>
-                {zonesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                    <div>
+                      <CardTitle className="text-base">Shipping Zones</CardTitle>
+                      <CardDescription className="text-xs">Configure delivery regions and rates</CardDescription>
+                    </div>
                   </div>
-                ) : shippingZones.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Zone</TableHead>
-                        <TableHead>Regions</TableHead>
-                        <TableHead>Base Rate</TableHead>
-                        <TableHead>Free Above</TableHead>
-                        <TableHead>Delivery</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {shippingZones.map((zone) => (
-                        <TableRow key={zone.id}>
-                          <TableCell className="font-medium">{zone.name}</TableCell>
-                          <TableCell className="max-w-xs truncate">{zone.regions.join(', ')}</TableCell>
-                          <TableCell>₹{zone.base_rate}</TableCell>
-                          <TableCell>{zone.free_shipping_threshold ? `₹${zone.free_shipping_threshold}` : '-'}</TableCell>
-                          <TableCell>{zone.estimated_days_min}-{zone.estimated_days_max} days</TableCell>
-                          <TableCell>
-                            <Badge variant={zone.is_active ? 'default' : 'secondary'}>
-                              {zone.is_active ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-2">
-                              <Button variant="ghost" size="icon" onClick={() => handleEditZone(zone)}>
+                  <Dialog open={isZoneDialogOpen} onOpenChange={(open) => {
+                    setIsZoneDialogOpen(open);
+                    if (!open) resetZoneForm();
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Zone
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="admin-card border-0">
+                      <DialogHeader>
+                        <DialogTitle>{editingZone ? 'Edit Shipping Zone' : 'Add Shipping Zone'}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Zone Name</Label>
+                          <Input
+                            value={zoneForm.name}
+                            onChange={(e) => setZoneForm({ ...zoneForm, name: e.target.value })}
+                            placeholder="e.g. North India"
+                            className="bg-muted/50 border-0"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Regions (comma separated)</Label>
+                          <Input
+                            value={zoneForm.regions}
+                            onChange={(e) => setZoneForm({ ...zoneForm, regions: e.target.value })}
+                            placeholder="Delhi, Punjab, Haryana"
+                            className="bg-muted/50 border-0"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium">Base Rate (₹)</Label>
+                            <Input
+                              type="number"
+                              value={zoneForm.base_rate}
+                              onChange={(e) => setZoneForm({ ...zoneForm, base_rate: Number(e.target.value) })}
+                              className="bg-muted/50 border-0"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium">Per KG Rate (₹)</Label>
+                            <Input
+                              type="number"
+                              value={zoneForm.per_kg_rate}
+                              onChange={(e) => setZoneForm({ ...zoneForm, per_kg_rate: Number(e.target.value) })}
+                              className="bg-muted/50 border-0"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Free Shipping Threshold (₹)</Label>
+                          <Input
+                            type="number"
+                            value={zoneForm.free_shipping_threshold}
+                            onChange={(e) => setZoneForm({ ...zoneForm, free_shipping_threshold: Number(e.target.value) })}
+                            className="bg-muted/50 border-0"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium">Min Delivery Days</Label>
+                            <Input
+                              type="number"
+                              value={zoneForm.estimated_days_min}
+                              onChange={(e) => setZoneForm({ ...zoneForm, estimated_days_min: Number(e.target.value) })}
+                              className="bg-muted/50 border-0"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium">Max Delivery Days</Label>
+                            <Input
+                              type="number"
+                              value={zoneForm.estimated_days_max}
+                              onChange={(e) => setZoneForm({ ...zoneForm, estimated_days_max: Number(e.target.value) })}
+                              className="bg-muted/50 border-0"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-2">
+                          <Label className="text-sm">Active</Label>
+                          <Switch
+                            checked={zoneForm.is_active}
+                            onCheckedChange={(checked) => setZoneForm({ ...zoneForm, is_active: checked })}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsZoneDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSaveZone} disabled={createZone.isPending || updateZone.isPending} className="gap-2">
+                          <Save className="h-4 w-4" />
+                          {createZone.isPending || updateZone.isPending ? 'Saving...' : 'Save'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </CardHeader>
+                <CardContent>
+                  {zonesLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                    </div>
+                  ) : shippingZones.length > 0 ? (
+                    <div className="space-y-3">
+                      {shippingZones.map((zone, index) => (
+                        <motion.div
+                          key={zone.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="flex items-center justify-between p-4 rounded-xl bg-muted/30 group hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <div className="p-2 rounded-lg bg-background">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium text-sm">{zone.name}</h4>
+                                <Badge variant={zone.is_active ? 'default' : 'secondary'} className="text-xs">
+                                  {zone.is_active ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate max-w-md">
+                                {zone.regions.join(', ')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right hidden sm:block">
+                              <p className="text-sm font-medium">₹{zone.base_rate}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {zone.estimated_days_min}-{zone.estimated_days_max} days
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditZone(zone)}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button 
                                 variant="ghost" 
-                                size="icon" 
-                                className="text-destructive"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
                                 onClick={() => deleteZone.mutate(zone.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
-                          </TableCell>
-                        </TableRow>
+                          </div>
+                        </motion.div>
                       ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-8">
-                    <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No shipping zones</h3>
-                    <p className="text-muted-foreground mb-4">Add shipping zones to enable delivery</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="p-4 rounded-full bg-muted/50 mb-4">
+                        <Truck className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">No shipping zones</h3>
+                      <p className="text-muted-foreground text-sm text-center max-w-sm mb-4">
+                        Add shipping zones to enable delivery
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
           </TabsContent>
 
           {/* Notifications Settings */}
           <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>Configure alerts and notifications</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card className="admin-card border-0">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
+                      <Bell className="h-5 w-5" />
+                    </div>
                     <div>
-                      <h4 className="font-medium">New Order Notifications</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Get notified when new orders are placed
-                      </p>
+                      <CardTitle className="text-base">Notification Preferences</CardTitle>
+                      <CardDescription className="text-xs">Configure alerts and notifications</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Order Notifications */}
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-background">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">New Order Notifications</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Get notified when new orders are placed
+                        </p>
+                      </div>
                     </div>
                     <Switch
                       checked={localSettings.enable_order_notifications === 'true'}
@@ -656,113 +758,170 @@ export default function AdminSettings() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h4 className="font-medium">Low Stock Alerts</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Get notified when products are running low
-                      </p>
+                  {/* Low Stock Alerts */}
+                  <div className="p-4 rounded-xl bg-muted/30 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-background">
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-sm">Low Stock Alerts</h4>
+                          <p className="text-xs text-muted-foreground">
+                            Get notified when products are running low
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={localSettings.enable_low_stock_alerts === 'true'}
+                        onCheckedChange={(checked) => setLocalSettings({ 
+                          ...localSettings, 
+                          enable_low_stock_alerts: checked ? 'true' : 'false' 
+                        })}
+                      />
                     </div>
-                    <Switch
-                      checked={localSettings.enable_low_stock_alerts === 'true'}
-                      onCheckedChange={(checked) => setLocalSettings({ 
-                        ...localSettings, 
-                        enable_low_stock_alerts: checked ? 'true' : 'false' 
-                      })}
-                    />
-                  </div>
 
-                  {localSettings.enable_low_stock_alerts === 'true' && (
-                    <div className="p-4 border rounded-lg space-y-4">
-                      <div className="flex items-center gap-4">
-                        <Label htmlFor="lowStockThreshold">Low stock threshold</Label>
+                    {localSettings.enable_low_stock_alerts === 'true' && (
+                      <div className="flex items-center gap-4 pl-11">
+                        <Label className="text-xs">Alert when stock falls below</Label>
                         <Input
-                          id="lowStockThreshold"
                           type="number"
                           value={localSettings.low_stock_threshold}
                           onChange={(e) => setLocalSettings({ ...localSettings, low_stock_threshold: e.target.value })}
-                          className="w-24"
+                          className="w-20 bg-background border-0"
                           min={1}
                         />
-                        <span className="text-sm text-muted-foreground">units</span>
+                        <span className="text-xs text-muted-foreground">units</span>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <Button onClick={handleSaveStoreSettings} disabled={updateSettings.isPending}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {updateSettings.isPending ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </CardContent>
-            </Card>
+                  <Button onClick={handleSaveStoreSettings} disabled={updateSettings.isPending} className="gap-2">
+                    <Save className="h-4 w-4" />
+                    {updateSettings.isPending ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
           </TabsContent>
 
           {/* Security Settings */}
           <TabsContent value="security">
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
-                <CardDescription>Manage security and access controls</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Admin Access</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Only users with the admin role can access this panel. Admin roles are managed through the database.
-                  </p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Row Level Security</h4>
-                  <p className="text-sm text-muted-foreground">
-                    All database tables have RLS enabled to ensure data security.
-                  </p>
-                  <Badge variant="secondary" className="mt-2">Enabled</Badge>
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card className="admin-card border-0">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
+                      <Shield className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Security Settings</CardTitle>
+                      <CardDescription className="text-xs">Manage security and access controls</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 rounded-xl bg-muted/30">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 rounded-lg bg-background">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <h4 className="font-medium text-sm">Admin Access</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground pl-11">
+                      Only users with the admin role can access this panel. Admin roles are managed through the database.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-muted/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-background">
+                          <Shield className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <h4 className="font-medium text-sm">Row Level Security</h4>
+                      </div>
+                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                        <Check className="h-3 w-3 mr-1" />
+                        Enabled
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground pl-11">
+                      All database tables have RLS enabled to ensure data security.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </TabsContent>
 
           {/* Activity Logs */}
           <TabsContent value="logs">
-            <Card>
-              <CardHeader>
-                <CardTitle>Activity Logs</CardTitle>
-                <CardDescription>Recent admin activities</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {logsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card className="admin-card border-0">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-slate-500/10 text-slate-500">
+                      <Activity className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Activity Logs</CardTitle>
+                      <CardDescription className="text-xs">Recent admin activities</CardDescription>
+                    </div>
                   </div>
-                ) : activityLogs.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Entity</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {activityLogs.map((log) => (
-                        <TableRow key={log.id}>
-                          <TableCell className="font-medium">{log.action}</TableCell>
-                          <TableCell>{log.entity_type}{log.entity_id ? ` (${log.entity_id.slice(0, 8)}...)` : ''}</TableCell>
-                          <TableCell>{format(new Date(log.created_at), 'MMM d, yyyy HH:mm')}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-8">
-                    <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No activity logs</h3>
-                    <p className="text-muted-foreground">Admin activities will be logged here</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent>
+                  {logsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                    </div>
+                  ) : activityLogs.length > 0 ? (
+                    <ScrollArea className="h-[400px] pr-4">
+                      <div className="space-y-3">
+                        {activityLogs.map((log, index) => (
+                          <motion.div
+                            key={log.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                            className="flex items-start gap-4 p-4 rounded-xl bg-muted/30"
+                          >
+                            <div className="p-2 rounded-lg bg-background shrink-0">
+                              <History className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm">{log.action}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {log.entity_type}{log.entity_id ? ` · ${log.entity_id.slice(0, 8)}...` : ''}
+                              </p>
+                            </div>
+                            <p className="text-xs text-muted-foreground shrink-0">
+                              {format(new Date(log.created_at), 'MMM d, HH:mm')}
+                            </p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="p-4 rounded-full bg-muted/50 mb-4">
+                        <History className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">No activity logs</h3>
+                      <p className="text-muted-foreground text-sm text-center max-w-sm">
+                        Admin activities will be logged here
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
           </TabsContent>
         </Tabs>
       </div>

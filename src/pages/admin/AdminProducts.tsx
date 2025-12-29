@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAdminProducts, useDeleteProduct, useUpdateProduct, useCreateProduct, useCategories } from '@/hooks/useProducts';
 import { useProductVariants, useCreateProductVariant, useUpdateProductVariant, useDeleteProductVariant } from '@/hooks/useAdmin';
 import { formatPrice } from '@/lib/utils';
@@ -19,18 +21,16 @@ import {
   Eye,
   EyeOff,
   Package,
-  X,
   Layers,
-  ImageIcon
+  ImageIcon,
+  Star,
+  TrendingUp,
+  AlertTriangle,
+  DollarSign,
+  Box,
+  Tag,
+  Settings2
 } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -136,6 +136,11 @@ export default function AdminProducts() {
          p.sku?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const activeProducts = products.filter(p => p.is_active).length;
+  const featuredProducts = products.filter(p => p.is_featured).length;
+  const lowStockProducts = products.filter(p => p.stock_quantity <= (p.low_stock_threshold || 5)).length;
+  const totalInventoryValue = products.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
+
   const toggleActive = async (id: string, currentStatus: boolean) => {
     await updateProduct.mutateAsync({ id, is_active: !currentStatus });
   };
@@ -231,430 +236,534 @@ export default function AdminProducts() {
     setNewVariant({ name: '', sku: '', price_modifier: '0', stock_quantity: '0' });
   };
 
+  const stats = [
+    { label: 'Total Products', value: products.length, icon: Package, color: 'text-primary' },
+    { label: 'Active', value: activeProducts, icon: TrendingUp, color: 'text-emerald-500' },
+    { label: 'Featured', value: featuredProducts, icon: Star, color: 'text-amber-500' },
+    { label: 'Low Stock', value: lowStockProducts, icon: AlertTriangle, color: 'text-red-500' },
+  ];
+
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 admin-page-enter">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold">Products</h1>
-            <p className="text-muted-foreground">Manage your product catalog</p>
+            <h1 className="text-2xl font-display font-bold text-foreground">Products</h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage your product catalog</p>
           </div>
-          <Button onClick={handleOpenCreate}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={handleOpenCreate} className="gap-2">
+            <Plus className="h-4 w-4" />
             Add Product
           </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                All Products ({products.length})
-              </CardTitle>
-              <div className="relative w-full sm:w-64">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Card className="admin-stat-card border-0">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                      <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                    </div>
+                    <div className={`p-2.5 rounded-xl bg-muted/50 ${stat.color}`}>
+                      <stat.icon className="h-5 w-5" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Inventory Value Card */}
+        <Card className="admin-card border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                  <DollarSign className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Total Inventory Value</p>
+                  <p className="text-xl font-bold">{formatPrice(totalInventoryValue)}</p>
+                </div>
+              </div>
+              <div className="relative w-full max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-muted/50 border-0"
                 />
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-              </div>
-            ) : filteredProducts.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-center">Stock</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-muted rounded overflow-hidden">
-                              {product.images?.[0] && (
-                                <img 
-                                  src={product.images[0].image_url} 
-                                  alt={product.name}
-                                  className="h-full w-full object-cover"
-                                />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium">{product.name}</p>
-                              {product.is_featured && (
-                                <Badge variant="secondary" className="text-xs">Featured</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {product.sku || '-'}
-                        </TableCell>
-                        <TableCell>
-                          {product.category?.name || '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div>
-                            <p className="font-medium">{formatPrice(Number(product.price))}</p>
-                            {product.compare_at_price && (
-                              <p className="text-sm text-muted-foreground line-through">
-                                {formatPrice(Number(product.compare_at_price))}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className={product.stock_quantity <= (product.low_stock_threshold || 5) 
-                            ? 'text-amber-600 font-medium' 
-                            : ''
-                          }>
-                            {product.stock_quantity}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={product.is_active ? 'default' : 'secondary'}>
-                            {product.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenVariants(product.id)}
-                              title="Manage Variants"
-                            >
-                              <Layers className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => toggleActive(product.id, product.is_active)}
-                              title={product.is_active ? 'Deactivate' : 'Activate'}
-                            >
-                              {product.is_active ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(product)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Product</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{product.name}"? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteProduct.mutate(product.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No products found</h3>
-                <p className="text-muted-foreground mb-4">
-                  {searchQuery ? 'Try a different search term' : 'Get started by adding your first product'}
-                </p>
-                {!searchQuery && (
-                  <Button onClick={handleOpenCreate}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
+
+        {/* Products Grid */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+          </div>
+        ) : filteredProducts.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03 }}
+              >
+                <Card className="admin-card border-0 overflow-hidden group">
+                  {/* Product Image */}
+                  <div className="aspect-square bg-muted/50 relative overflow-hidden">
+                    {product.images?.[0] ? (
+                      <img 
+                        src={product.images[0].image_url} 
+                        alt={product.name}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center">
+                        <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
+                      </div>
+                    )}
+                    
+                    {/* Status Badges */}
+                    <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                      {product.is_featured && (
+                        <Badge className="bg-amber-500/90 text-white border-0 text-xs">
+                          <Star className="h-3 w-3 mr-1" />
+                          Featured
+                        </Badge>
+                      )}
+                      {!product.is_active && (
+                        <Badge variant="secondary" className="bg-muted/90 text-xs">
+                          Inactive
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Stock Badge */}
+                    {product.stock_quantity <= (product.low_stock_threshold || 5) && (
+                      <Badge 
+                        className="absolute top-3 right-3 bg-red-500/90 text-white border-0 text-xs"
+                      >
+                        Low Stock
+                      </Badge>
+                    )}
+
+                    {/* Quick Actions Overlay */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="h-9 w-9 rounded-full"
+                        onClick={() => handleOpenEdit(product)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="h-9 w-9 rounded-full"
+                        onClick={() => handleOpenVariants(product.id)}
+                      >
+                        <Layers className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="h-9 w-9 rounded-full"
+                        onClick={() => toggleActive(product.id, product.is_active)}
+                      >
+                        {product.is_active ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="destructive"
+                            className="h-9 w-9 rounded-full"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="admin-card border-0">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{product.name}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteProduct.mutate(product.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+
+                  {/* Product Info */}
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm line-clamp-1">{product.name}</h3>
+                        <p className="text-xs text-muted-foreground">
+                          {product.sku || 'No SKU'} · {product.category?.name || 'Uncategorized'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                      <div>
+                        <p className="font-bold text-primary">{formatPrice(Number(product.price))}</p>
+                        {product.compare_at_price && (
+                          <p className="text-xs text-muted-foreground line-through">
+                            {formatPrice(Number(product.compare_at_price))}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-medium ${
+                          product.stock_quantity <= (product.low_stock_threshold || 5) 
+                            ? 'text-red-500' 
+                            : 'text-muted-foreground'
+                        }`}>
+                          {product.stock_quantity} in stock
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <Card className="admin-card border-0">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="p-4 rounded-full bg-muted/50 mb-4">
+                <Package className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No products found</h3>
+              <p className="text-muted-foreground text-sm text-center max-w-sm mb-6">
+                {searchQuery ? 'Try a different search term' : 'Get started by adding your first product'}
+              </p>
+              {!searchQuery && (
+                <Button onClick={handleOpenCreate} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Product
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Product Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+        <DialogContent className="max-w-3xl max-h-[90vh] p-0 admin-card border-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-0 sticky top-0 bg-admin-card z-10">
+            <DialogTitle className="text-lg font-semibold">
+              {editingProduct ? 'Edit Product' : 'Add New Product'}
+            </DialogTitle>
           </DialogHeader>
           
-          <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="basic">Basic</TabsTrigger>
-              <TabsTrigger value="images" disabled={!editingProduct}>
-                <ImageIcon className="h-4 w-4 mr-1" />
-                Images
-              </TabsTrigger>
-              <TabsTrigger value="pricing">Pricing</TabsTrigger>
-              <TabsTrigger value="inventory">Inventory</TabsTrigger>
-              <TabsTrigger value="seo">SEO</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="basic" className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Name *</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      name: e.target.value,
-                      slug: generateSlug(e.target.value)
-                    }))}
-                    placeholder="Product name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Slug</Label>
-                  <Input
-                    value={formData.slug}
-                    onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                    placeholder="product-slug"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Short Description</Label>
-                <Textarea
-                  value={formData.short_description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, short_description: e.target.value }))}
-                  placeholder="Brief product description"
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Full Description</Label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Detailed product description"
-                  rows={4}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select 
-                    value={formData.category_id} 
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, category_id: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map(cat => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Room Type</Label>
-                  <Input
-                    value={formData.room_type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, room_type: e.target.value }))}
-                    placeholder="e.g. Living Room"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Material</Label>
-                  <Input
-                    value={formData.material}
-                    onChange={(e) => setFormData(prev => ({ ...prev, material: e.target.value }))}
-                    placeholder="e.g. Wood"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Color</Label>
-                  <Input
-                    value={formData.color}
-                    onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                    placeholder="e.g. Brown"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Dimensions</Label>
-                  <Input
-                    value={formData.dimensions}
-                    onChange={(e) => setFormData(prev => ({ ...prev, dimensions: e.target.value }))}
-                    placeholder="e.g. 180x90x75 cm"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-6">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
-                  />
-                  <Label>Active</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.is_featured}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_featured: checked }))}
-                  />
-                  <Label>Featured</Label>
-                </div>
-              </div>
-            </TabsContent>
+          <ScrollArea className="max-h-[calc(90vh-8rem)]">
+            <div className="p-6 pt-4">
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-5 bg-muted/50 p-1 rounded-lg">
+                  <TabsTrigger value="basic" className="gap-1.5 text-xs data-[state=active]:bg-background">
+                    <Box className="h-3.5 w-3.5" />
+                    Basic
+                  </TabsTrigger>
+                  <TabsTrigger value="images" disabled={!editingProduct} className="gap-1.5 text-xs data-[state=active]:bg-background">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    Images
+                  </TabsTrigger>
+                  <TabsTrigger value="pricing" className="gap-1.5 text-xs data-[state=active]:bg-background">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    Pricing
+                  </TabsTrigger>
+                  <TabsTrigger value="inventory" className="gap-1.5 text-xs data-[state=active]:bg-background">
+                    <Package className="h-3.5 w-3.5" />
+                    Inventory
+                  </TabsTrigger>
+                  <TabsTrigger value="seo" className="gap-1.5 text-xs data-[state=active]:bg-background">
+                    <Tag className="h-3.5 w-3.5" />
+                    SEO
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="basic" className="space-y-4 pt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Name *</Label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          name: e.target.value,
+                          slug: generateSlug(e.target.value)
+                        }))}
+                        placeholder="Product name"
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Slug</Label>
+                      <Input
+                        value={formData.slug}
+                        onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                        placeholder="product-slug"
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Short Description</Label>
+                    <Textarea
+                      value={formData.short_description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, short_description: e.target.value }))}
+                      placeholder="Brief product description"
+                      rows={2}
+                      className="bg-muted/50 border-0 resize-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Full Description</Label>
+                    <Textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Detailed product description"
+                      rows={4}
+                      className="bg-muted/50 border-0 resize-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Category</Label>
+                      <Select 
+                        value={formData.category_id} 
+                        onValueChange={(v) => setFormData(prev => ({ ...prev, category_id: v }))}
+                      >
+                        <SelectTrigger className="bg-muted/50 border-0">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Room Type</Label>
+                      <Input
+                        value={formData.room_type}
+                        onChange={(e) => setFormData(prev => ({ ...prev, room_type: e.target.value }))}
+                        placeholder="e.g. Living Room"
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Material</Label>
+                      <Input
+                        value={formData.material}
+                        onChange={(e) => setFormData(prev => ({ ...prev, material: e.target.value }))}
+                        placeholder="e.g. Wood"
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Color</Label>
+                      <Input
+                        value={formData.color}
+                        onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                        placeholder="e.g. Brown"
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Dimensions</Label>
+                      <Input
+                        value={formData.dimensions}
+                        onChange={(e) => setFormData(prev => ({ ...prev, dimensions: e.target.value }))}
+                        placeholder="e.g. 180x90x75 cm"
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-6 pt-2">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={formData.is_active}
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                      />
+                      <Label className="text-sm">Active</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={formData.is_featured}
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_featured: checked }))}
+                      />
+                      <Label className="text-sm">Featured</Label>
+                    </div>
+                  </div>
+                </TabsContent>
 
-            <TabsContent value="images" className="space-y-4 pt-4">
-              {editingProduct ? (
-                <ProductImageGallery productId={editingProduct.id} />
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Save the product first to add images.
-                </div>
-              )}
-            </TabsContent>
+                <TabsContent value="images" className="space-y-4 pt-4">
+                  {editingProduct ? (
+                    <ProductImageGallery productId={editingProduct.id} />
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">Save the product first to add images.</p>
+                    </div>
+                  )}
+                </TabsContent>
 
-            <TabsContent value="pricing" className="space-y-4 pt-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Price *</Label>
-                  <Input
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder="0"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Compare at Price</Label>
-                  <Input
-                    type="number"
-                    value={formData.compare_at_price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, compare_at_price: e.target.value }))}
-                    placeholder="Original price for sale"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Cost Price</Label>
-                  <Input
-                    type="number"
-                    value={formData.cost_price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cost_price: e.target.value }))}
-                    placeholder="Your cost"
-                  />
-                </div>
-              </div>
-            </TabsContent>
+                <TabsContent value="pricing" className="space-y-4 pt-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Price *</Label>
+                      <Input
+                        type="number"
+                        value={formData.price}
+                        onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                        placeholder="0"
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Compare at Price</Label>
+                      <Input
+                        type="number"
+                        value={formData.compare_at_price}
+                        onChange={(e) => setFormData(prev => ({ ...prev, compare_at_price: e.target.value }))}
+                        placeholder="Original price"
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Cost Price</Label>
+                      <Input
+                        type="number"
+                        value={formData.cost_price}
+                        onChange={(e) => setFormData(prev => ({ ...prev, cost_price: e.target.value }))}
+                        placeholder="Your cost"
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
 
-            <TabsContent value="inventory" className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>SKU</Label>
-                  <Input
-                    value={formData.sku}
-                    onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-                    placeholder="Stock keeping unit"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Barcode</Label>
-                  <Input
-                    value={formData.barcode}
-                    onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
-                    placeholder="UPC, EAN, etc."
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Stock Quantity</Label>
-                  <Input
-                    type="number"
-                    value={formData.stock_quantity}
-                    onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Low Stock Threshold</Label>
-                  <Input
-                    type="number"
-                    value={formData.low_stock_threshold}
-                    onChange={(e) => setFormData(prev => ({ ...prev, low_stock_threshold: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Weight (kg)</Label>
-                  <Input
-                    type="number"
-                    value={formData.weight}
-                    onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
-                  />
-                </div>
-              </div>
-            </TabsContent>
+                <TabsContent value="inventory" className="space-y-4 pt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">SKU</Label>
+                      <Input
+                        value={formData.sku}
+                        onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
+                        placeholder="Stock keeping unit"
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Barcode</Label>
+                      <Input
+                        value={formData.barcode}
+                        onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
+                        placeholder="UPC, EAN, etc."
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Stock Quantity</Label>
+                      <Input
+                        type="number"
+                        value={formData.stock_quantity}
+                        onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: e.target.value }))}
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Low Stock Alert</Label>
+                      <Input
+                        type="number"
+                        value={formData.low_stock_threshold}
+                        onChange={(e) => setFormData(prev => ({ ...prev, low_stock_threshold: e.target.value }))}
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Weight (kg)</Label>
+                      <Input
+                        type="number"
+                        value={formData.weight}
+                        onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
+                        className="bg-muted/50 border-0"
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
 
-            <TabsContent value="seo" className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Meta Title</Label>
-                <Input
-                  value={formData.meta_title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, meta_title: e.target.value }))}
-                  placeholder="SEO title"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Meta Description</Label>
-                <Textarea
-                  value={formData.meta_description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, meta_description: e.target.value }))}
-                  placeholder="SEO description"
-                  rows={3}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
+                <TabsContent value="seo" className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Meta Title</Label>
+                    <Input
+                      value={formData.meta_title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, meta_title: e.target.value }))}
+                      placeholder="SEO title"
+                      className="bg-muted/50 border-0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Meta Description</Label>
+                    <Textarea
+                      value={formData.meta_description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, meta_description: e.target.value }))}
+                      placeholder="SEO description"
+                      rows={3}
+                      className="bg-muted/50 border-0 resize-none"
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </ScrollArea>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+          <DialogFooter className="p-6 pt-4 border-t border-border/50 bg-admin-card sticky bottom-0">
+            <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
             <Button 
               onClick={handleSave}
               disabled={!formData.name || !formData.price || updateProduct.isPending || createProduct.isPending}
             >
-              {updateProduct.isPending || createProduct.isPending ? 'Saving...' : editingProduct ? 'Update' : 'Create'}
+              {updateProduct.isPending || createProduct.isPending ? 'Saving...' : editingProduct ? 'Update Product' : 'Create Product'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -662,9 +771,12 @@ export default function AdminProducts() {
 
       {/* Variants Dialog */}
       <Dialog open={variantsDialogOpen} onOpenChange={setVariantsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl admin-card border-0">
           <DialogHeader>
-            <DialogTitle>Product Variants</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5" />
+              Product Variants
+            </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -673,81 +785,69 @@ export default function AdminProducts() {
                 placeholder="Variant name (e.g. Large, Blue)"
                 value={newVariant.name}
                 onChange={(e) => setNewVariant(prev => ({ ...prev, name: e.target.value }))}
-                className="flex-1"
+                className="flex-1 bg-muted/50 border-0"
               />
               <Input
                 placeholder="SKU"
                 value={newVariant.sku}
                 onChange={(e) => setNewVariant(prev => ({ ...prev, sku: e.target.value }))}
-                className="w-24"
+                className="w-24 bg-muted/50 border-0"
               />
               <Input
                 type="number"
                 placeholder="Price +/-"
                 value={newVariant.price_modifier}
                 onChange={(e) => setNewVariant(prev => ({ ...prev, price_modifier: e.target.value }))}
-                className="w-24"
+                className="w-24 bg-muted/50 border-0"
               />
               <Input
                 type="number"
                 placeholder="Stock"
                 value={newVariant.stock_quantity}
                 onChange={(e) => setNewVariant(prev => ({ ...prev, stock_quantity: e.target.value }))}
-                className="w-20"
+                className="w-20 bg-muted/50 border-0"
               />
-              <Button onClick={handleAddVariant} disabled={!newVariant.name || createVariant.isPending}>
+              <Button onClick={handleAddVariant} disabled={!newVariant.name || createVariant.isPending} size="icon">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
 
             {variants.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead className="text-right">Price Modifier</TableHead>
-                    <TableHead className="text-center">Stock</TableHead>
-                    <TableHead className="text-center">Active</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {variants.map((variant) => (
-                    <TableRow key={variant.id}>
-                      <TableCell className="font-medium">{variant.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{variant.sku || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        {Number(variant.price_modifier) >= 0 ? '+' : ''}{formatPrice(Number(variant.price_modifier))}
-                      </TableCell>
-                      <TableCell className="text-center">{variant.stock_quantity}</TableCell>
-                      <TableCell className="text-center">
-                        <Switch
-                          checked={variant.is_active ?? true}
-                          onCheckedChange={(checked) => updateVariant.mutate({ 
-                            id: variant.id, 
-                            product_id: variant.product_id,
-                            is_active: checked 
-                          })}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive"
-                          onClick={() => deleteVariant.mutate({ id: variant.id, productId: variant.product_id })}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="space-y-2">
+                {variants.map((variant) => (
+                  <div key={variant.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{variant.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {variant.sku || 'No SKU'} · Stock: {variant.stock_quantity}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0">
+                      {Number(variant.price_modifier) >= 0 ? '+' : ''}{formatPrice(Number(variant.price_modifier))}
+                    </Badge>
+                    <Switch
+                      checked={variant.is_active ?? true}
+                      onCheckedChange={(checked) => updateVariant.mutate({ 
+                        id: variant.id, 
+                        product_id: variant.product_id,
+                        is_active: checked 
+                      })}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive h-8 w-8"
+                      onClick={() => deleteVariant.mutate({ id: variant.id, productId: variant.product_id })}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                No variants yet. Add size, color, or other options above.
+                <Settings2 className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">No variants yet. Add size, color, or other options above.</p>
               </div>
             )}
           </div>
