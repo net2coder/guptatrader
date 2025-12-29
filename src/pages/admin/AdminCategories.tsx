@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useProducts';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { 
   Plus, 
   Search,
@@ -15,16 +16,10 @@ import {
   Edit,
   Trash2,
   Upload,
-  Image
+  Image,
+  FolderOpen,
+  ArrowUpRight
 } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -81,6 +76,8 @@ export default function AdminCategories() {
   const filteredCategories = categories.filter(
     c => c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const activeCategories = categories.filter(c => c.is_active).length;
 
   const generateSlug = (name: string) => {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -158,23 +155,62 @@ export default function AdminCategories() {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold">Categories</h1>
-            <p className="text-muted-foreground">Organize your product catalog</p>
+            <h1 className="text-2xl lg:text-3xl font-display font-bold">Categories</h1>
+            <p className="text-muted-foreground mt-1">Organize your product catalog</p>
           </div>
-          <Button onClick={handleOpenCreate}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={handleOpenCreate} className="gap-2">
+            <Plus className="h-4 w-4" />
             Add Category
           </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <CardTitle className="flex items-center gap-2">
+        {/* Stats */}
+        <div className="grid gap-4 sm:grid-cols-3 stagger-fade-in">
+          <div className="admin-card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Categories</p>
+                <p className="text-2xl font-bold mt-1">{categories.length}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-muted/50 text-admin-stat-1">
+                <FolderOpen className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+          <div className="admin-card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Active</p>
+                <p className="text-2xl font-bold mt-1">{activeCategories}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-muted/50 text-green-500">
                 <Tag className="h-5 w-5" />
-                All Categories ({categories.length})
+              </div>
+            </div>
+          </div>
+          <div className="admin-card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Inactive</p>
+                <p className="text-2xl font-bold mt-1">{categories.length - activeCategories}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-muted/50 text-muted-foreground">
+                <Tag className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Categories Grid */}
+        <Card className="admin-card">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Tag className="h-5 w-5 text-muted-foreground" />
+                All Categories
               </CardTitle>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -182,110 +218,110 @@ export default function AdminCategories() {
                   placeholder="Search categories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-background"
                 />
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              <div className="flex items-center justify-center py-16">
+                <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
               </div>
             ) : filteredCategories.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Slug</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="text-center">Order</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCategories.map((category) => (
-                      <TableRow key={category.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            {category.image_url ? (
-                              <div className="h-10 w-10 bg-muted rounded overflow-hidden">
-                                <img 
-                                  src={category.image_url} 
-                                  alt={category.name}
-                                  className="h-full w-full object-cover"
-                                />
-                              </div>
-                            ) : (
-                              <div className="h-10 w-10 bg-muted rounded flex items-center justify-center">
-                                <Image className="h-5 w-5 text-muted-foreground" />
-                              </div>
-                            )}
-                            <span className="font-medium">{category.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {category.slug}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate text-muted-foreground">
-                          {category.description || '-'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {category.sort_order || 0}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={category.is_active ? 'default' : 'secondary'}>
-                            {category.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(category)}>
-                              <Edit className="h-4 w-4" />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-fade-in">
+                {filteredCategories.map((category) => (
+                  <div 
+                    key={category.id}
+                    className="group bg-background border border-border/50 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200"
+                  >
+                    {/* Image */}
+                    <div className="aspect-video bg-muted relative overflow-hidden">
+                      {category.image_url ? (
+                        <img 
+                          src={category.image_url} 
+                          alt={category.name}
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Image className="h-12 w-12 text-muted-foreground/30" />
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2">
+                        <Badge variant={category.is_active ? 'default' : 'secondary'}>
+                          {category.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <h3 className="font-semibold">{category.name}</h3>
+                          <p className="text-sm text-muted-foreground">/{category.slug}</p>
+                        </div>
+                        <Badge variant="outline" className="shrink-0">
+                          Order: {category.sort_order || 0}
+                        </Badge>
+                      </div>
+                      {category.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                          {category.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 gap-1"
+                          onClick={() => handleOpenEdit(category)}
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Category</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{category.name}"? Products in this category will be unassigned.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteCategory.mutate(category.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{category.name}"? Products in this category will be unassigned.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteCategory.mutate(category.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Tag className="h-8 w-8 text-muted-foreground/50" />
+                </div>
                 <h3 className="text-lg font-medium mb-2">No categories found</h3>
                 <p className="text-muted-foreground mb-4">
                   {searchQuery ? 'Try a different search term' : 'Get started by creating your first category'}
                 </p>
                 {!searchQuery && (
-                  <Button onClick={handleOpenCreate}>
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button onClick={handleOpenCreate} className="gap-2">
+                    <Plus className="h-4 w-4" />
                     Add Category
                   </Button>
                 )}
@@ -295,36 +331,39 @@ export default function AdminCategories() {
         </Card>
       </div>
 
+      {/* Category Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingCategory ? 'Edit Category' : 'Create New Category'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                placeholder="e.g. Living Room"
-                value={formData.name}
-                onChange={(e) => {
-                  const name = e.target.value;
-                  setFormData(prev => ({
-                    ...prev,
-                    name,
-                    slug: editingCategory ? prev.slug : generateSlug(name),
-                  }));
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="slug">Slug *</Label>
-              <Input
-                id="slug"
-                placeholder="living-room"
-                value={formData.slug}
-                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. Living Room"
+                  value={formData.name}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    setFormData(prev => ({
+                      ...prev,
+                      name,
+                      slug: editingCategory ? prev.slug : generateSlug(name),
+                    }));
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slug">Slug *</Label>
+                <Input
+                  id="slug"
+                  placeholder="living-room"
+                  value={formData.slug}
+                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
@@ -339,7 +378,7 @@ export default function AdminCategories() {
               <Label>Category Image</Label>
               <div className="flex items-center gap-4">
                 {formData.image_url ? (
-                  <div className="h-20 w-20 bg-muted rounded-lg overflow-hidden">
+                  <div className="h-20 w-20 bg-muted rounded-xl overflow-hidden">
                     <img 
                       src={formData.image_url} 
                       alt="Category" 
@@ -347,7 +386,7 @@ export default function AdminCategories() {
                     />
                   </div>
                 ) : (
-                  <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center">
+                  <div className="h-20 w-20 bg-muted rounded-xl flex items-center justify-center">
                     <Image className="h-8 w-8 text-muted-foreground" />
                   </div>
                 )}
@@ -364,8 +403,9 @@ export default function AdminCategories() {
                     variant="outline" 
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
+                    className="gap-2"
                   >
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Upload className="h-4 w-4" />
                     {uploading ? 'Uploading...' : 'Upload Image'}
                   </Button>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -384,7 +424,7 @@ export default function AdminCategories() {
                   onChange={(e) => setFormData(prev => ({ ...prev, sort_order: e.target.value }))}
                 />
               </div>
-              <div className="flex items-center gap-2 pt-8">
+              <div className="flex items-center gap-3 pt-8">
                 <Switch
                   id="is_active"
                   checked={formData.is_active}
