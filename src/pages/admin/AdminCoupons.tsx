@@ -28,6 +28,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -180,6 +181,9 @@ export default function AdminCoupons() {
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>{editingCoupon ? 'Edit Coupon' : 'Create Coupon'}</DialogTitle>
+                <DialogDescription>
+                  {editingCoupon ? 'Modify the coupon details below.' : 'Fill in the details to create a new discount coupon.'}
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
                 <div className="grid grid-cols-2 gap-4">
