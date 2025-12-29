@@ -138,13 +138,13 @@ export function Header() {
           </Sheet>
 
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 flex-shrink-0">
             <img 
               src={logoUrl || logo} 
               alt={storeName} 
-              className="h-8 md:h-10 w-auto object-contain"
+              className="h-8 md:h-10 w-auto object-contain flex-shrink-0"
             />
-            <span className="hidden md:inline font-display text-xl md:text-2xl font-bold text-primary">
+            <span className="font-display text-lg md:text-2xl font-bold text-primary whitespace-nowrap">
               {storeName}
             </span>
           </Link>
