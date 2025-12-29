@@ -866,6 +866,7 @@ CREATE POLICY "Admins can manage reviews" ON reviews FOR ALL USING (is_admin());
 -- ==========================================
 CREATE POLICY "Only admins can view all coupons" ON coupons FOR SELECT USING (is_admin());
 CREATE POLICY "Admins can manage coupons" ON coupons FOR ALL USING (is_admin());
+CREATE POLICY "Anyone can view active announcement coupons" ON coupons FOR SELECT USING (is_active = true AND is_announcement = true);
 
 -- ==========================================
 -- SHIPPING ZONES POLICIES
