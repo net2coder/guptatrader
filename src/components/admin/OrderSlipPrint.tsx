@@ -229,6 +229,9 @@ const OrderSlipPrint = forwardRef<HTMLDivElement, OrderSlipPrintProps>(
           {storeSettings?.store_name && (
             <p className="mt-1">© {new Date().getFullYear()} {storeSettings.store_name}. All rights reserved.</p>
           )}
+          <p className="mt-3 text-xs text-gray-400">
+            Terms & Conditions: Guarantee and warranty are provided by the respective company, not the seller.
+          </p>
         </div>
       </div>
     );
