@@ -86,9 +86,10 @@ export default function AuthPage() {
   useEffect(() => {
     // Only redirect if user is logged in AND not in password reset mode
     if (!authLoading && user && !isPasswordResetMode) {
-      navigate('/');
+      const redirectTo = searchParams.get('redirect') || '/';
+      navigate(redirectTo);
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, searchParams]);
 
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),

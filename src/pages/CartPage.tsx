@@ -1,14 +1,35 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trash2, Minus, Plus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Trash2, Minus, Plus, ShoppingBag, ArrowRight, LogIn } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import { formatPrice } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function CartPage() {
   const { getCartItems, updateQuantity, removeFromCart, getCartTotal, clearCart, isLoading } =
     useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+
+  const handleCheckout = () => {
+    if (!user) {
+      setShowLoginDialog(true);
+    } else {
+      navigate('/checkout');
+    }
+  };
   const cartItems = getCartItems();
   const cartTotal = getCartTotal();
 
@@ -216,17 +237,46 @@ export default function CartPage() {
                 <span>{formatPrice(totalWithDelivery)}</span>
               </div>
 
-              <Button className="w-full" size="lg" asChild>
-                <Link to="/checkout">
-                  Proceed to Checkout
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
+              <Button className="w-full" size="lg" onClick={handleCheckout}>
+                Proceed to Checkout
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
 
               <p className="text-xs text-muted-foreground text-center mt-4">
                 Taxes and shipping calculated at checkout
               </p>
             </div>
+
+            {/* Login Dialog for Guest Users */}
+            <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <LogIn className="h-5 w-5" />
+                    Login Required
+                  </DialogTitle>
+                  <DialogDescription>
+                    Please login or create an account to proceed with checkout. This helps us save your order history and delivery addresses.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="flex-col gap-2 sm:flex-row">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowLoginDialog(false)}
+                    className="w-full sm:w-auto"
+                  >
+                    Continue Browsing
+                  </Button>
+                  <Button
+                    onClick={() => navigate('/auth?redirect=/checkout')}
+                    className="w-full sm:w-auto"
+                  >
+                    Login / Sign Up
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </motion.div>
         </div>
       </div>
