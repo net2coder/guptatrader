@@ -42,6 +42,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/lib/utils';
 import { escapeHtml } from '@/lib/sanitize';
+import logo from '@/assets/logo.png';
 
 interface Address {
   id: string;
@@ -305,6 +306,7 @@ export default function ProfilePage() {
         </head>
         <body>
           <div class="header">
+            <img src="${logo}" alt="Gupta Traders" style="height: 48px; margin: 0 auto 8px;" />
             <h1>Gupta Traders</h1>
             <p>Order Confirmation Slip</p>
           </div>

@@ -10,6 +10,7 @@ import { useOrder } from '@/hooks/useOrders';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { formatPrice } from '@/lib/utils';
 import { escapeHtml } from '@/lib/sanitize';
+import logo from '@/assets/logo.png';
 
 interface ShippingAddress {
   full_name?: string;
@@ -138,6 +139,7 @@ export default function OrderConfirmationPage() {
           <CardContent className="p-6" ref={printRef}>
             {/* Header with Store Info */}
             <div className="header text-center mb-6">
+              <img src={logo} alt={storeName} className="h-12 mx-auto mb-2" />
               <h1 className="text-2xl font-bold">{storeName}</h1>
               <p className="text-muted-foreground">Order Confirmation Slip</p>
               <p className="contact text-sm text-muted-foreground mt-2">

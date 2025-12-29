@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, Menu, X, User, LogOut, Settings } from 'lucide-react';
+import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -138,17 +139,14 @@ export function Header() {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            {logoUrl ? (
-              <img 
-                src={logoUrl} 
-                alt={storeName} 
-                className="h-8 md:h-10 max-w-[150px] object-contain"
-              />
-            ) : (
-              <span className="font-display text-xl md:text-2xl font-bold text-primary">
-                {storeName}
-              </span>
-            )}
+            <img 
+              src={logoUrl || logo} 
+              alt={storeName} 
+              className="h-8 md:h-10 w-auto object-contain"
+            />
+            <span className="hidden md:inline font-display text-xl md:text-2xl font-bold text-primary">
+              {storeName}
+            </span>
           </Link>
 
           {/* Desktop navigation */}
