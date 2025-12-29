@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import { 
   useCoupons, 
   useCreateCoupon, 
@@ -19,15 +20,11 @@ import {
   Edit,
   Trash2,
   Copy,
+  Percent,
+  Calendar,
+  Users,
+  ArrowUpRight
 } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -76,6 +73,10 @@ export default function AdminCoupons() {
     c => c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
          c.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const activeCoupons = coupons.filter(c => c.is_active && !isExpired(c.expires_at)).length;
+  const expiredCoupons = coupons.filter(c => isExpired(c.expires_at)).length;
+  const totalUsage = coupons.reduce((sum, c) => sum + (c.used_count || 0), 0);
 
   const resetForm = () => {
     setFormData({
@@ -141,26 +142,34 @@ export default function AdminCoupons() {
     toast({ title: 'Code copied to clipboard' });
   };
 
-  const isExpired = (expiresAt: string | null) => {
+  function isExpired(expiresAt: string | null) {
     if (!expiresAt) return false;
     return new Date(expiresAt) < new Date();
-  };
+  }
+
+  const stats = [
+    { label: 'Total Coupons', value: coupons.length, icon: Ticket, color: 'text-admin-stat-1' },
+    { label: 'Active', value: activeCoupons, icon: Percent, color: 'text-green-500' },
+    { label: 'Expired', value: expiredCoupons, icon: Calendar, color: 'text-red-500' },
+    { label: 'Total Usage', value: totalUsage, icon: Users, color: 'text-admin-stat-3' },
+  ];
 
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold">Coupons</h1>
-            <p className="text-muted-foreground">Manage discount codes and offers</p>
+            <h1 className="text-2xl lg:text-3xl font-display font-bold">Coupons</h1>
+            <p className="text-muted-foreground mt-1">Manage discount codes and offers</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) resetForm();
           }}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
                 Create Coupon
               </Button>
             </DialogTrigger>
@@ -258,17 +267,17 @@ export default function AdminCoupons() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <Label>Active</Label>
                   <Switch
                     checked={formData.is_active}
                     onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div>
                     <Label>Show as Announcement</Label>
-                    <p className="text-xs text-muted-foreground">Display this coupon in the promo banner on the homepage</p>
+                    <p className="text-xs text-muted-foreground">Display in the promo banner</p>
                   </div>
                   <Switch
                     checked={formData.is_announcement}
@@ -289,12 +298,31 @@ export default function AdminCoupons() {
           </Dialog>
         </div>
 
-        <Card>
-          <CardHeader>
+        {/* Stats */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 stagger-fade-in">
+          {stats.map((stat) => (
+            <div key={stat.label} className="admin-card p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                </div>
+                <div className={cn("p-3 rounded-xl bg-muted/50", stat.color)}>
+                  <stat.icon className="h-5 w-5" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Coupons List */}
+        <Card className="admin-card">
+          <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <CardTitle className="flex items-center gap-2">
-                <Ticket className="h-5 w-5" />
-                All Coupons ({coupons.length})
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Ticket className="h-5 w-5 text-muted-foreground" />
+                All Coupons
+                <Badge variant="secondary" className="ml-2">{coupons.length}</Badge>
               </CardTitle>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -302,109 +330,120 @@ export default function AdminCoupons() {
                   placeholder="Search coupons..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-background"
                 />
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              <div className="flex items-center justify-center py-16">
+                <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
               </div>
             ) : filteredCoupons.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Discount</TableHead>
-                      <TableHead>Min Order</TableHead>
-                      <TableHead>Usage</TableHead>
-                      <TableHead>Validity</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCoupons.map((coupon) => (
-                      <TableRow key={coupon.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-medium">{coupon.code}</span>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyCode(coupon.code)}>
-                              <Copy className="h-3 w-3" />
-                            </Button>
+              <div className="space-y-3 stagger-fade-in">
+                {filteredCoupons.map((coupon) => {
+                  const expired = isExpired(coupon.expires_at);
+                  return (
+                    <div 
+                      key={coupon.id}
+                      className={cn(
+                        "group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border transition-all duration-200",
+                        expired 
+                          ? 'bg-red-50/50 dark:bg-red-950/10 border-red-200/50 dark:border-red-800/30' 
+                          : coupon.is_active
+                          ? 'bg-background hover:bg-muted/30 border-border/50'
+                          : 'bg-muted/30 border-border/50'
+                      )}
+                    >
+                      {/* Coupon Info */}
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Ticket className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-lg">{coupon.code}</span>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6" 
+                                onClick={() => copyCode(coupon.code)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            {expired ? (
+                              <Badge variant="destructive">Expired</Badge>
+                            ) : (
+                              <Badge variant={coupon.is_active ? 'default' : 'secondary'}>
+                                {coupon.is_active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            )}
+                            {coupon.is_announcement && (
+                              <Badge variant="outline" className="text-amber-600 border-amber-300">
+                                Announcement
+                              </Badge>
+                            )}
                           </div>
-                          {coupon.description && (
-                            <p className="text-xs text-muted-foreground mt-1">{coupon.description}</p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {coupon.discount_type === 'percentage' 
-                            ? `${coupon.discount_value}%`
-                            : `₹${coupon.discount_value}`
-                          }
-                          {coupon.maximum_discount && (
-                            <span className="text-xs text-muted-foreground block">
-                              Max ₹{coupon.maximum_discount}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {coupon.minimum_order_amount ? `₹${coupon.minimum_order_amount}` : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {coupon.used_count} / {coupon.usage_limit || '∞'}
-                        </TableCell>
-                        <TableCell>
-                          {coupon.expires_at ? (
-                            <span className={isExpired(coupon.expires_at) ? 'text-destructive' : ''}>
-                              {format(new Date(coupon.expires_at), 'PP')}
-                            </span>
-                          ) : (
-                            'No expiry'
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {isExpired(coupon.expires_at) ? (
-                            <Badge variant="destructive">Expired</Badge>
-                          ) : (
-                            <Badge variant={coupon.is_active ? 'default' : 'secondary'}>
-                              {coupon.is_active ? 'Active' : 'Inactive'}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(coupon)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive"
-                              onClick={() => deleteCoupon.mutate(coupon.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          <p className="text-sm text-muted-foreground">
+                            {coupon.description || 'No description'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Discount & Stats */}
+                      <div className="flex items-center gap-6 sm:gap-8">
+                        <div className="text-center">
+                          <p className="text-lg font-bold">
+                            {coupon.discount_type === 'percentage' 
+                              ? `${coupon.discount_value}%`
+                              : `₹${coupon.discount_value}`
+                            }
+                          </p>
+                          <p className="text-xs text-muted-foreground">Discount</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold">{coupon.used_count} / {coupon.usage_limit || '∞'}</p>
+                          <p className="text-xs text-muted-foreground">Used</p>
+                        </div>
+                        <div className="text-center hidden sm:block">
+                          <p className="text-sm font-medium">
+                            {coupon.expires_at ? format(new Date(coupon.expires_at), 'PP') : 'No expiry'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Expires</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(coupon)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive"
+                            onClick={() => deleteCoupon.mutate(coupon.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Ticket className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Ticket className="h-8 w-8 text-muted-foreground/50" />
+                </div>
                 <h3 className="text-lg font-medium mb-2">No coupons found</h3>
                 <p className="text-muted-foreground mb-4">
                   {searchQuery ? 'Try a different search' : 'Create your first discount code'}
                 </p>
                 {!searchQuery && (
-                  <Button onClick={() => setIsDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+                    <Plus className="h-4 w-4" />
                     Create Coupon
                   </Button>
                 )}
