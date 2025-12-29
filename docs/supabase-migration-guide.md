@@ -1,6 +1,6 @@
 # Supabase Migration Guide
 
-This guide contains all SQL scripts and instructions to migrate your Lovable Cloud database to a standalone Supabase project.
+This guide contains all SQL scripts and instructions to migrate your database to a standalone Supabase project.
 
 ## Prerequisites
 

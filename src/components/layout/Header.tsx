@@ -17,8 +17,8 @@ import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useCategories } from '@/hooks/useProducts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { categories } from '@/data/products';
 import { SaleCountdownBanner } from '@/components/home/SaleCountdownBanner';
 
 export function Header() {
@@ -28,6 +28,7 @@ export function Header() {
   const { getWishlistCount } = useWishlist();
   const { user, profile, isAdmin, signOut } = useAuth();
   const { data: storeSettings } = useStoreSettings();
+  const { data: categories = [] } = useCategories();
   const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -70,7 +71,7 @@ export function Header() {
                 {categories.map(cat => (
                   <Link
                     key={cat.id}
-                    to={`/products?category=${cat.id}`}
+                    to={`/products?category=${cat.slug}`}
                     className="text-lg font-medium hover:text-primary transition-colors"
                   >
                     {cat.name}
@@ -159,7 +160,7 @@ export function Header() {
             {categories.slice(0, 4).map(cat => (
               <Link
                 key={cat.id}
-                to={`/products?category=${cat.id}`}
+                to={`/products?category=${cat.slug}`}
                 className="text-sm font-medium hover:text-primary transition-colors"
               >
                 {cat.name}

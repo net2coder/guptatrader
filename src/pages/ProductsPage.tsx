@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/collapsible';
 import { useProducts, useCategories } from '@/hooks/useProducts';
 import { Product } from '@/types/product';
+import { SEO } from '@/components/SEO';
 
 type SortOption = 'featured' | 'price-low' | 'price-high' | 'newest';
 
@@ -267,8 +268,32 @@ export default function ProductsPage() {
     </div>
   );
 
+  const BASE_URL = import.meta.env.VITE_SITE_URL || 'https://www.guptatraders.net';
+  const selectedCategory = categories?.find(c => selectedCategories.includes(c.slug));
+  const pageTitle = searchQuery 
+    ? `Search Results for "${searchQuery}" | Products`
+    : selectedCategory
+    ? `${selectedCategory.name} Furniture | ${selectedCategory.name} Collection`
+    : 'All Products | Premium Furniture Collection';
+  const pageDescription = searchQuery
+    ? `Find ${filteredProducts.length} products matching "${searchQuery}" at Gupta Traders. Premium furniture with free delivery and warranty.`
+    : selectedCategory
+    ? `Browse our ${selectedCategory.name} collection. ${filteredProducts.length} premium ${selectedCategory.name.toLowerCase()} furniture pieces with free delivery and 5-year warranty.`
+    : `Browse our complete collection of ${filteredProducts.length} premium furniture pieces. Sofas, beds, dining tables, office furniture & more. Free delivery, 5-year warranty.`;
+
   return (
     <Layout>
+      <SEO
+        data={{
+          title: pageTitle,
+          description: pageDescription,
+          keywords: selectedCategory 
+            ? `${selectedCategory.name}, furniture, ${selectedCategory.name.toLowerCase()} furniture, buy online, Gupta Traders`
+            : 'furniture, home furniture, office furniture, buy furniture online, premium furniture India',
+          url: `${BASE_URL}/products${selectedCategory ? `?category=${selectedCategory.slug}` : ''}${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`,
+          type: 'website',
+        }}
+      />
       <div className="container py-8">
         {/* Header */}
         <div className="mb-8">

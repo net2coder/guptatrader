@@ -24,6 +24,7 @@ import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { toast } from 'sonner';
 import { getProductImage, getDiscountPercentage, formatPrice, isInStock } from '@/types/product';
+import { SEO } from '@/components/SEO';
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -101,11 +102,51 @@ export default function ProductDetailPage() {
     navigate('/cart');
   };
 
+  const BASE_URL = import.meta.env.VITE_SITE_URL || 'https://www.guptatraders.net';
+  const productImage = getProductImage(product);
+  const breadcrumbs = [
+    { name: 'Home', url: `${BASE_URL}/` },
+    { name: 'Products', url: `${BASE_URL}/products` },
+    ...(product.category ? [{ name: product.category.name, url: `${BASE_URL}/products?category=${product.category.slug}` }] : []),
+    { name: product.name, url: `${BASE_URL}/product/${product.slug}` },
+  ];
+
+  const keywords = [
+    product.name,
+    product.category?.name,
+    product.material,
+    product.color,
+    'furniture',
+    'buy online',
+    'Gupta Traders',
+  ].filter(Boolean).join(', ');
+
   return (
     <Layout>
+      <SEO
+        data={{
+          title: product.name,
+          description: product.description || product.short_description || `${product.name} - Premium furniture from Gupta Traders. ${product.material ? `Made from ${product.material}.` : ''} Free delivery, 5-year warranty.`,
+          keywords,
+          image: productImage,
+          url: `${BASE_URL}/product/${product.slug}`,
+          type: 'product',
+          product: {
+            name: product.name,
+            price: product.price,
+            currency: 'INR',
+            availability: product.stock_quantity > 0 ? 'in stock' : 'out of stock',
+            condition: 'new',
+            brand: 'Gupta Traders',
+            category: product.category?.name,
+          },
+        }}
+        product={product}
+        breadcrumbs={breadcrumbs}
+      />
       <div className="container py-8">
         {/* Breadcrumbs */}
-        <nav className="text-sm text-muted-foreground mb-6">
+        <nav className="text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
           <ol className="flex items-center gap-2">
             <li>
               <Link to="/" className="hover:text-foreground transition-colors">

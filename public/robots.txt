@@ -1,37 +1,39 @@
 # Gupta Traders - Robots.txt
 # https://www.guptatraders.net
 
-User-agent: Googlebot
-Allow: /
-Disallow: /admin
-Disallow: /auth
-Disallow: /profile
-Disallow: /checkout
-
-User-agent: Bingbot
-Allow: /
-Disallow: /admin
-Disallow: /auth
-Disallow: /profile
-Disallow: /checkout
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
+# Allow all search engines
 User-agent: *
 Allow: /
+Allow: /products
+Allow: /product/
+
+# Disallow private/user-specific pages
 Disallow: /admin
 Disallow: /admin/*
 Disallow: /auth
 Disallow: /profile
 Disallow: /checkout
 Disallow: /order-confirmation
+Disallow: /cart
+Disallow: /wishlist
 
-# Sitemap
+# Allow social media crawlers
+User-agent: Twitterbot
+Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /profile
+Disallow: /checkout
+
+User-agent: facebookexternalhit
+Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /profile
+Disallow: /checkout
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Sitemap location
 Sitemap: https://www.guptatraders.net/sitemap.xml
-
-# Host
-Host: https://www.guptatraders.net
