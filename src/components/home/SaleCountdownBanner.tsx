@@ -41,8 +41,25 @@ function TimeBlock({ value, label }: { value: number; label: string }) {
 
 export function SaleCountdownBanner() {
   const { data: coupons = [] } = useAnnouncementCoupons();
-  const [dismissed, setDismissed] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
+  
+  // Use sessionStorage to persist dismissed state across navigations
+  const getDismissed = (): string[] => {
+    try {
+      const stored = sessionStorage.getItem('dismissed-sale-banners');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  };
+  
+  const [dismissed, setDismissed] = useState<string[]>(getDismissed);
+  
+  const handleDismiss = (id: string) => {
+    const newDismissed = [...dismissed, id];
+    setDismissed(newDismissed);
+    sessionStorage.setItem('dismissed-sale-banners', JSON.stringify(newDismissed));
+  };
   
   // Find an active announcement coupon with expiration date
   const activeSale = coupons.find(
@@ -143,7 +160,7 @@ export function SaleCountdownBanner() {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-primary-foreground hover:bg-background/20 shrink-0"
-              onClick={() => setDismissed(prev => [...prev, activeSale.id])}
+              onClick={() => handleDismiss(activeSale.id)}
             >
               <X className="h-4 w-4" />
             </Button>
