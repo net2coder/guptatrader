@@ -260,3 +260,41 @@ export function useCreateOrder() {
     },
   });
 }
+
+// Admin: Delete order
+export function useDeleteOrder() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (orderId: string) => {
+      // First delete order items (they reference the order)
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', orderId);
+
+      if (itemsError) throw itemsError;
+
+      // Then delete the order
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['user-orders'] });
+      toast({ title: 'Order deleted successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error deleting order', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    },
+  });
+}

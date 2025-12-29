@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { useAdminOrders, useUpdateOrderStatus, OrderStatus, PaymentStatus } from '@/hooks/useOrders';
+import { useAdminOrders, useUpdateOrderStatus, useDeleteOrder, OrderStatus, PaymentStatus } from '@/hooks/useOrders';
 import { formatPrice } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,7 +20,8 @@ import {
   XCircle,
   CreditCard,
   Phone,
-  MapPin
+  MapPin,
+  Trash2
 } from 'lucide-react';
 import {
   Table,
@@ -44,6 +45,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
 
 const statusColors: Record<OrderStatus, string> = {
@@ -82,9 +93,11 @@ export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [trackingNumber, setTrackingNumber] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
+  const [orderToDelete, setOrderToDelete] = useState<any>(null);
 
   const { data: orders = [], isLoading, refetch } = useAdminOrders();
   const updateStatus = useUpdateOrderStatus();
+  const deleteOrder = useDeleteOrder();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -482,11 +495,50 @@ export default function AdminOrders() {
                     Mark as Delivered
                   </Button>
                 )}
+                {/* Delete Order */}
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    setOrderToDelete(selectedOrder);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Order
+                </Button>
               </DialogFooter>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!orderToDelete} onOpenChange={() => setOrderToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete order <strong>{orderToDelete?.order_number}</strong>? 
+              This action cannot be undone and will permanently remove the order and all its items from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (orderToDelete) {
+                  await deleteOrder.mutateAsync(orderToDelete.id);
+                  setOrderToDelete(null);
+                  setSelectedOrder(null);
+                }
+              }}
+            >
+              Delete Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
