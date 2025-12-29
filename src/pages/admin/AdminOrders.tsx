@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,9 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useAdminOrders, useUpdateOrderStatus, useDeleteOrder, OrderStatus, PaymentStatus } from '@/hooks/useOrders';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { formatPrice } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import OrderSlipPrint from '@/components/admin/OrderSlipPrint';
 import { 
   Search, 
   ShoppingCart,
@@ -21,7 +23,9 @@ import {
   CreditCard,
   Phone,
   MapPin,
-  Trash2
+  Trash2,
+  Printer,
+  Download
 } from 'lucide-react';
 import {
   Table,
@@ -94,8 +98,11 @@ export default function AdminOrders() {
   const [trackingNumber, setTrackingNumber] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   const [orderToDelete, setOrderToDelete] = useState<any>(null);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   const { data: orders = [], isLoading, refetch } = useAdminOrders();
+  const { data: storeSettings } = useStoreSettings();
   const updateStatus = useUpdateOrderStatus();
   const deleteOrder = useDeleteOrder();
   const { toast } = useToast();
@@ -173,6 +180,42 @@ export default function AdminOrders() {
 
   const pendingCount = orders.filter(o => o.status === 'pending').length;
   const unpaidCount = orders.filter(o => o.payment_status === 'pending' && o.status !== 'cancelled').length;
+
+  const handlePrintOrderSlip = () => {
+    setShowPrintPreview(true);
+    setTimeout(() => {
+      if (printRef.current) {
+        const printContents = printRef.current.innerHTML;
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>Order Slip - ${selectedOrder?.order_number}</title>
+                <style>
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
+                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+                  @media print {
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  }
+                </style>
+                <script src="https://cdn.tailwindcss.com"></script>
+              </head>
+              <body>
+                ${printContents}
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
+      }
+      setShowPrintPreview(false);
+    }, 100);
+  };
 
   return (
     <AdminLayout>
@@ -501,6 +544,15 @@ export default function AdminOrders() {
                     Mark as Delivered
                   </Button>
                 )}
+                {/* Export/Print Order Slip */}
+                <Button
+                  variant="outline"
+                  onClick={handlePrintOrderSlip}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print / Export
+                </Button>
+
                 {/* Delete Order */}
                 <Button
                   variant="outline"
@@ -513,6 +565,15 @@ export default function AdminOrders() {
                   Delete Order
                 </Button>
               </DialogFooter>
+
+              {/* Hidden Print Template */}
+              <div className="hidden">
+                <OrderSlipPrint
+                  ref={printRef}
+                  order={selectedOrder}
+                  storeSettings={storeSettings}
+                />
+              </div>
             </>
           )}
         </DialogContent>
