@@ -63,6 +63,7 @@ export default function AdminCoupons() {
     minimum_order_amount: 0,
     maximum_discount: 0,
     usage_limit: 0,
+    per_user_limit: 0,
     starts_at: '',
     expires_at: '',
     is_active: true,
@@ -87,6 +88,7 @@ export default function AdminCoupons() {
       minimum_order_amount: 0,
       maximum_discount: 0,
       usage_limit: 0,
+      per_user_limit: 0,
       starts_at: '',
       expires_at: '',
       is_active: true,
@@ -105,6 +107,7 @@ export default function AdminCoupons() {
       minimum_order_amount: coupon.minimum_order_amount || 0,
       maximum_discount: coupon.maximum_discount || 0,
       usage_limit: coupon.usage_limit || 0,
+      per_user_limit: coupon.per_user_limit || 0,
       starts_at: coupon.starts_at ? coupon.starts_at.split('T')[0] : '',
       expires_at: coupon.expires_at ? coupon.expires_at.split('T')[0] : '',
       is_active: coupon.is_active,
@@ -122,6 +125,7 @@ export default function AdminCoupons() {
       minimum_order_amount: formData.minimum_order_amount || null,
       maximum_discount: formData.maximum_discount || null,
       usage_limit: formData.usage_limit || null,
+      per_user_limit: formData.per_user_limit || null,
       starts_at: formData.starts_at ? new Date(formData.starts_at).toISOString() : null,
       expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
       is_active: formData.is_active,
@@ -240,7 +244,7 @@ export default function AdminCoupons() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Usage Limit</Label>
+                    <Label>Total Usage Limit</Label>
                     <Input
                       type="number"
                       value={formData.usage_limit}
@@ -248,6 +252,18 @@ export default function AdminCoupons() {
                       placeholder="0 = unlimited"
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Per-User Limit</Label>
+                  <Input
+                    type="number"
+                    value={formData.per_user_limit}
+                    onChange={(e) => setFormData({ ...formData, per_user_limit: Number(e.target.value) })}
+                    placeholder="0 = unlimited per user"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Limit how many times each customer can use this coupon
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

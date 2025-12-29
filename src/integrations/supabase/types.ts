@@ -216,6 +216,45 @@ export type Database = {
           },
         ]
       }
+      coupon_usages: {
+        Row: {
+          coupon_id: string
+          id: string
+          order_id: string | null
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          coupon_id: string
+          id?: string
+          order_id?: string | null
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string
+          id?: string
+          order_id?: string | null
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_usages_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_usages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupons: {
         Row: {
           code: string
@@ -229,6 +268,7 @@ export type Database = {
           is_announcement: boolean | null
           maximum_discount: number | null
           minimum_order_amount: number | null
+          per_user_limit: number | null
           starts_at: string | null
           updated_at: string
           usage_limit: number | null
@@ -246,6 +286,7 @@ export type Database = {
           is_announcement?: boolean | null
           maximum_discount?: number | null
           minimum_order_amount?: number | null
+          per_user_limit?: number | null
           starts_at?: string | null
           updated_at?: string
           usage_limit?: number | null
@@ -263,6 +304,7 @@ export type Database = {
           is_announcement?: boolean | null
           maximum_discount?: number | null
           minimum_order_amount?: number | null
+          per_user_limit?: number | null
           starts_at?: string | null
           updated_at?: string
           usage_limit?: number | null
@@ -899,14 +941,27 @@ export type Database = {
         }
         Returns: string
       }
-      validate_coupon: {
-        Args: { p_code: string; p_order_subtotal: number }
-        Returns: {
-          discount_amount: number
-          message: string
-          valid: boolean
-        }[]
-      }
+      validate_coupon:
+        | {
+            Args: { p_code: string; p_order_subtotal: number }
+            Returns: {
+              discount_amount: number
+              message: string
+              valid: boolean
+            }[]
+          }
+        | {
+            Args: {
+              p_code: string
+              p_order_subtotal: number
+              p_user_id?: string
+            }
+            Returns: {
+              discount_amount: number
+              message: string
+              valid: boolean
+            }[]
+          }
     }
     Enums: {
       app_role: "admin" | "customer"
