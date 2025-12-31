@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
   ChevronRight,
@@ -8,10 +8,12 @@ import {
   ShoppingCart,
   Truck,
   Shield,
-  RefreshCw,
+  Award,
   Minus,
   Plus,
   Check,
+  Share2,
+  Package,
 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -24,7 +26,6 @@ import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { toast } from 'sonner';
 import { getProductImage, getDiscountPercentage, formatPrice, isInStock } from '@/types/product';
-import { SEO } from '@/components/SEO';
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -35,7 +36,6 @@ export default function ProductDetailPage() {
   const { addToCart, isInCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
 
-  // Fetch related products from same category
   const { data: allProducts } = useProducts();
   const relatedProducts = allProducts
     ?.filter(p => p.category_id === product?.category_id && p.id !== product?.id)
@@ -44,15 +44,22 @@ export default function ProductDetailPage() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="container py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-            <Skeleton className="aspect-square rounded-xl" />
+        <div className="container py-6 md:py-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
             <div className="space-y-4">
-              <Skeleton className="h-6 w-24" />
-              <Skeleton className="h-10 w-3/4" />
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-24 w-full" />
+              <Skeleton className="aspect-square w-full rounded-2xl" />
+              <div className="flex gap-2">
+                {[1, 2, 3, 4].map(i => (
+                  <Skeleton key={i} className="w-16 h-16 rounded-lg flex-shrink-0" />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-10 w-4/5" />
+              <Skeleton className="h-8 w-36" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
             </div>
           </div>
@@ -65,13 +72,16 @@ export default function ProductDetailPage() {
     return (
       <Layout>
         <div className="container py-16 text-center">
-          <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
-          <p className="text-muted-foreground mb-8">
-            The product you're looking for doesn't exist.
-          </p>
-          <Button asChild>
-            <Link to="/products">Browse Products</Link>
-          </Button>
+          <div className="max-w-md mx-auto">
+            <Package className="h-16 w-16 mx-auto text-muted-foreground mb-6" />
+            <h1 className="font-display text-2xl font-bold mb-3">Product Not Found</h1>
+            <p className="text-muted-foreground mb-8">
+              The product you're looking for doesn't exist or has been removed.
+            </p>
+            <Button asChild size="lg">
+              <Link to="/products">Browse Products</Link>
+            </Button>
+          </div>
         </div>
       </Layout>
     );
@@ -99,67 +109,52 @@ export default function ProductDetailPage() {
 
   const handleBuyNow = () => {
     addToCart(product.id, quantity);
-    navigate('/cart');
+    navigate('/checkout');
   };
 
-  const BASE_URL = import.meta.env.VITE_SITE_URL || 'https://www.guptatraders.net';
-  const productImage = getProductImage(product);
-  const breadcrumbs = [
-    { name: 'Home', url: `${BASE_URL}/` },
-    { name: 'Products', url: `${BASE_URL}/products` },
-    ...(product.category ? [{ name: product.category.name, url: `${BASE_URL}/products?category=${product.category.slug}` }] : []),
-    { name: product.name, url: `${BASE_URL}/product/${product.slug}` },
-  ];
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: product.name,
+          text: product.short_description || product.name,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied to clipboard');
+    }
+  };
 
-  const keywords = [
-    product.name,
-    product.category?.name,
-    product.material,
-    product.color,
-    'furniture',
-    'buy online',
-    'Gupta Traders',
-  ].filter(Boolean).join(', ');
+  const nextImage = () => {
+    setCurrentImageIndex(prev => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex(prev => (prev - 1 + images.length) % images.length);
+  };
 
   return (
     <Layout>
-      <SEO
-        data={{
-          title: product.name,
-          description: product.description || product.short_description || `${product.name} - Premium furniture from Gupta Traders. ${product.material ? `Made from ${product.material}.` : ''} Free delivery, 5-year warranty.`,
-          keywords,
-          image: productImage,
-          url: `${BASE_URL}/product/${product.slug}`,
-          type: 'product',
-          product: {
-            name: product.name,
-            price: product.price,
-            currency: 'INR',
-            availability: product.stock_quantity > 0 ? 'in stock' : 'out of stock',
-            condition: 'new',
-            brand: 'Gupta Traders',
-            category: product.category?.name,
-          },
-        }}
-        product={product}
-        breadcrumbs={breadcrumbs}
-      />
-      <div className="container py-8">
-        {/* Breadcrumbs */}
-        <nav className="text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
+      <div className="container py-4 md:py-8">
+        {/* Breadcrumbs - Hidden on mobile */}
+        <nav className="hidden md:flex text-sm text-muted-foreground mb-6">
           <ol className="flex items-center gap-2">
             <li>
               <Link to="/" className="hover:text-foreground transition-colors">
                 Home
               </Link>
             </li>
-            <li>/</li>
+            <li className="text-muted-foreground/50">/</li>
             <li>
               <Link to="/products" className="hover:text-foreground transition-colors">
                 Products
               </Link>
             </li>
-            <li>/</li>
+            <li className="text-muted-foreground/50">/</li>
             <li>
               <Link
                 to={`/products?category=${product.category?.slug || ''}`}
@@ -168,34 +163,67 @@ export default function ProductDetailPage() {
                 {categoryName}
               </Link>
             </li>
-            <li>/</li>
-            <li className="text-foreground">{product.name}</li>
+            <li className="text-muted-foreground/50">/</li>
+            <li className="text-foreground truncate max-w-[200px]">{product.name}</li>
           </ol>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+        {/* Mobile back button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="md:hidden mb-4 -ml-2 text-muted-foreground"
+          onClick={() => navigate(-1)}
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
           {/* Image gallery */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-3 md:space-y-4"
           >
-            <div className="relative aspect-square bg-secondary rounded-xl overflow-hidden">
-              <img
-                src={currentImage}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
+            <div className="relative aspect-square bg-secondary rounded-xl md:rounded-2xl overflow-hidden">
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={currentImageIndex}
+                  src={currentImage}
+                  alt={product.name}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full h-full object-cover"
+                />
+              </AnimatePresence>
 
               {/* Badges */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2">
+              <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-2">
                 {product.is_featured && (
-                  <Badge className="bg-accent text-accent-foreground">Featured</Badge>
+                  <Badge className="bg-accent text-accent-foreground text-xs font-medium">
+                    Featured
+                  </Badge>
                 )}
                 {discountPercentage > 0 && (
-                  <Badge variant="destructive">{discountPercentage}% OFF</Badge>
+                  <Badge variant="destructive" className="text-xs font-medium">
+                    {discountPercentage}% OFF
+                  </Badge>
                 )}
               </div>
+
+              {/* Share button - Mobile */}
+              <Button
+                variant="secondary"
+                size="icon"
+                className="absolute top-3 right-3 md:top-4 md:right-4 h-9 w-9 rounded-full shadow-md"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
 
               {/* Navigation arrows */}
               {images.length > 1 && (
@@ -203,40 +231,51 @@ export default function ProductDetailPage() {
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full"
-                    onClick={() =>
-                      setCurrentImageIndex(
-                        prev => (prev - 1 + images.length) % images.length
-                      )
-                    }
+                    className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full shadow-lg opacity-90 hover:opacity-100"
+                    onClick={prevImage}
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full"
-                    onClick={() =>
-                      setCurrentImageIndex(prev => (prev + 1) % images.length)
-                    }
+                    className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full shadow-lg opacity-90 hover:opacity-100"
+                    onClick={nextImage}
                   >
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                 </>
               )}
+
+              {/* Image indicators - Mobile */}
+              {images.length > 1 && (
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 md:hidden">
+                  {images.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentImageIndex
+                          ? 'bg-primary w-4'
+                          : 'bg-primary/40'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Thumbnails */}
+            {/* Thumbnails - Desktop only */}
             {images.length > 1 && (
-              <div className="flex gap-3">
+              <div className="hidden md:flex gap-3 overflow-x-auto pb-1">
                 {images.map((image, index) => (
                   <button
                     key={image.id}
                     onClick={() => setCurrentImageIndex(index)}
-                    className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                    className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
                       index === currentImageIndex
-                        ? 'border-primary'
-                        : 'border-transparent'
+                        ? 'border-primary ring-2 ring-primary/20'
+                        : 'border-transparent hover:border-border'
                     }`}
                   >
                     <img
@@ -252,32 +291,38 @@ export default function ProductDetailPage() {
 
           {/* Product info */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="space-y-5 md:space-y-6"
           >
             <div>
-              <p className="text-sm text-muted-foreground uppercase tracking-wide mb-2">
+              <Link
+                to={`/products?category=${product.category?.slug || ''}`}
+                className="text-sm text-primary font-medium uppercase tracking-wide hover:underline"
+              >
                 {categoryName}
-              </p>
-              <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
+              </Link>
+              <h1 className="font-display text-2xl md:text-3xl lg:text-4xl font-bold mt-2 text-foreground">
                 {product.name}
               </h1>
+            </div>
 
-              {/* Price */}
-              <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-bold">{formatPrice(product.price)}</span>
-                {product.compare_at_price && (
-                  <span className="text-xl text-muted-foreground line-through">
-                    {formatPrice(product.compare_at_price)}
-                  </span>
-                )}
-                {discountPercentage > 0 && (
-                  <Badge variant="destructive" className="text-sm">
-                    Save {discountPercentage}%
-                  </Badge>
-                )}
-              </div>
+            {/* Price */}
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <span className="text-2xl md:text-3xl font-bold text-foreground">
+                {formatPrice(product.price)}
+              </span>
+              {product.compare_at_price && (
+                <span className="text-lg text-muted-foreground line-through">
+                  {formatPrice(product.compare_at_price)}
+                </span>
+              )}
+              {discountPercentage > 0 && (
+                <Badge className="bg-success text-success-foreground text-xs">
+                  Save {discountPercentage}%
+                </Badge>
+              )}
             </div>
 
             {/* Description */}
@@ -288,36 +333,39 @@ export default function ProductDetailPage() {
             {/* Stock status */}
             <div className="flex items-center gap-2">
               {inStock ? (
-                <>
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span className="text-green-600 font-medium">
+                <div className="flex items-center gap-2 text-success">
+                  <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                  <span className="font-medium text-sm">
                     In Stock ({product.stock_quantity} available)
                   </span>
-                </>
+                </div>
               ) : (
-                <span className="text-destructive font-medium">Out of Stock</span>
+                <div className="flex items-center gap-2 text-destructive">
+                  <div className="w-2 h-2 rounded-full bg-destructive" />
+                  <span className="font-medium text-sm">Out of Stock</span>
+                </div>
               )}
             </div>
 
             {/* Quantity and actions */}
-            <div className="space-y-4">
+            <div className="space-y-4 pt-2">
               <div className="flex items-center gap-4">
-                <span className="font-medium">Quantity:</span>
-                <div className="flex items-center border border-border rounded-lg">
+                <span className="text-sm font-medium text-foreground">Quantity</span>
+                <div className="flex items-center bg-secondary rounded-lg">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-10 w-10"
+                    className="h-10 w-10 rounded-l-lg"
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
                     disabled={quantity <= 1}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
-                  <span className="w-12 text-center font-medium">{quantity}</span>
+                  <span className="w-12 text-center font-semibold text-foreground">{quantity}</span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-10 w-10"
+                    className="h-10 w-10 rounded-r-lg"
                     onClick={() =>
                       setQuantity(q => Math.min(product.stock_quantity, q + 1))
                     }
@@ -328,150 +376,187 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  size="lg"
-                  className="flex-1"
-                  onClick={handleAddToCart}
-                  disabled={!inStock}
-                >
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  {isInCart(product.id) ? 'Add More' : 'Add to Cart'}
-                </Button>
+              {/* Action buttons - Large, Touch-Friendly */}
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <Button
+                    size="lg"
+                    className="flex-1 h-14 sm:h-16 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl active:scale-[0.98] transition-all duration-200 touch-manipulation"
+                    onClick={handleAddToCart}
+                    disabled={!inStock}
+                  >
+                    <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
+                    {isInCart(product.id) ? 'Add More' : 'Add to Cart'}
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-14 sm:h-16 w-14 sm:w-16 rounded-xl border-2 flex-shrink-0 active:scale-[0.98] transition-all duration-200 touch-manipulation"
+                    onClick={handleToggleWishlist}
+                  >
+                    <Heart
+                      className={`h-6 w-6 ${
+                        isInWishlist(product.id) ? 'fill-current text-destructive' : ''
+                      }`}
+                    />
+                  </Button>
+                </div>
                 <Button
                   size="lg"
                   variant="secondary"
-                  className="flex-1"
+                  className="w-full h-14 sm:h-16 text-base sm:text-lg font-semibold rounded-xl border-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 active:scale-[0.98] transition-all duration-200 touch-manipulation"
                   onClick={handleBuyNow}
                   disabled={!inStock}
                 >
                   Buy Now
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={handleToggleWishlist}
-                >
-                  <Heart
-                    className={`h-5 w-5 ${
-                      isInWishlist(product.id) ? 'fill-current text-destructive' : ''
-                    }`}
-                  />
-                </Button>
               </div>
             </div>
 
-            {/* Features */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border">
-              <div className="flex items-center gap-3">
-                <Truck className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Free Delivery</p>
-                  <p className="text-xs text-muted-foreground">On orders above ₹10,000</p>
+            {/* Features - Cards on mobile, inline on desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
+              {[
+                { icon: Truck, title: 'Free Delivery', desc: 'On orders above ₹10,000' },
+                { icon: Shield, title: '5 Year Warranty', desc: 'Manufacturer warranty' },
+                { icon: Award, title: 'Best Price', desc: 'Quality at best prices' },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div
+                  key={title}
+                  className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{desc}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Shield className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">5 Year Warranty</p>
-                  <p className="text-xs text-muted-foreground">Manufacturer Warranty</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <RefreshCw className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Easy Returns</p>
-                  <p className="text-xs text-muted-foreground">30 days return policy</p>
-                </div>
-              </div>
+              ))}
             </div>
           </motion.div>
         </div>
 
         {/* Tabs */}
-        <div className="mt-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="mt-10 md:mt-16"
+        >
           <Tabs defaultValue="specifications" className="w-full">
-            <TabsList className="w-full justify-start border-b border-border rounded-none h-auto p-0 bg-transparent">
+            <TabsList className="w-full justify-start border-b border-border rounded-none h-auto p-0 bg-transparent overflow-x-auto">
               <TabsTrigger
                 value="specifications"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 md:px-6 py-3 text-sm font-medium whitespace-nowrap"
               >
                 Specifications
               </TabsTrigger>
               <TabsTrigger
                 value="shipping"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 md:px-6 py-3 text-sm font-medium whitespace-nowrap"
               >
-                Shipping & Returns
+                Shipping Info
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="specifications" className="py-6">
               <div className="max-w-2xl">
-                <table className="w-full">
-                  <tbody>
-                    {product.dimensions && (
-                      <tr className="border-b border-border">
-                        <td className="py-3 font-medium">Dimensions</td>
-                        <td className="py-3 text-muted-foreground">{product.dimensions}</td>
-                      </tr>
-                    )}
-                    {product.weight && (
-                      <tr className="border-b border-border">
-                        <td className="py-3 font-medium">Weight</td>
-                        <td className="py-3 text-muted-foreground">{product.weight} kg</td>
-                      </tr>
-                    )}
-                    {product.material && (
-                      <tr className="border-b border-border">
-                        <td className="py-3 font-medium">Material</td>
-                        <td className="py-3 text-muted-foreground">{product.material}</td>
-                      </tr>
-                    )}
-                    {product.color && (
-                      <tr className="border-b border-border">
-                        <td className="py-3 font-medium">Color</td>
-                        <td className="py-3 text-muted-foreground">{product.color}</td>
-                      </tr>
-                    )}
-                    {product.sku && (
-                      <tr>
-                        <td className="py-3 font-medium">SKU</td>
-                        <td className="py-3 text-muted-foreground">{product.sku}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                {(product.dimensions || product.weight || product.material || product.color || product.sku) ? (
+                  <div className="bg-secondary/30 rounded-xl overflow-hidden">
+                    <table className="w-full">
+                      <tbody>
+                        {product.dimensions && (
+                          <tr className="border-b border-border/50">
+                            <td className="py-3 px-4 font-medium text-foreground w-1/3">Dimensions</td>
+                            <td className="py-3 px-4 text-muted-foreground">{product.dimensions}</td>
+                          </tr>
+                        )}
+                        {product.weight && (
+                          <tr className="border-b border-border/50">
+                            <td className="py-3 px-4 font-medium text-foreground">Weight</td>
+                            <td className="py-3 px-4 text-muted-foreground">{product.weight} kg</td>
+                          </tr>
+                        )}
+                        {product.material && (
+                          <tr className="border-b border-border/50">
+                            <td className="py-3 px-4 font-medium text-foreground">Material</td>
+                            <td className="py-3 px-4 text-muted-foreground">{product.material}</td>
+                          </tr>
+                        )}
+                        {product.color && (
+                          <tr className="border-b border-border/50">
+                            <td className="py-3 px-4 font-medium text-foreground">Color</td>
+                            <td className="py-3 px-4 text-muted-foreground">{product.color}</td>
+                          </tr>
+                        )}
+                        {product.sku && (
+                          <tr>
+                            <td className="py-3 px-4 font-medium text-foreground">SKU</td>
+                            <td className="py-3 px-4 text-muted-foreground font-mono text-sm">{product.sku}</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No specifications available.</p>
+                )}
               </div>
             </TabsContent>
 
             <TabsContent value="shipping" className="py-6">
-              <div className="max-w-2xl space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Shipping</h3>
-                  <p className="text-muted-foreground">
-                    Free shipping on orders above ₹10,000. Standard delivery takes 5-7
-                    business days. Express delivery available at additional cost.
-                  </p>
+              <div className="max-w-2xl space-y-6">
+                <div className="bg-secondary/30 rounded-xl p-5">
+                  <div className="flex items-start gap-3">
+                    <Truck className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <h3 className="font-semibold text-foreground mb-2">Shipping</h3>
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        Free shipping on orders above ₹10,000. Standard delivery takes 5-7
+                        business days. Express delivery available at additional cost.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Returns & Exchanges</h3>
-                  <p className="text-muted-foreground">
-                    We offer a 30-day return policy for all unused items in original
-                    packaging. For furniture items, a restocking fee of 15% may apply.
-                  </p>
+                <div className="bg-secondary/30 rounded-xl p-5">
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <h3 className="font-semibold text-foreground mb-2">Warranty & Support</h3>
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        All our products come with a manufacturer warranty of up to 5 years.
+                        For any issues, our support team is available 24/7 to assist you.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </TabsContent>
           </Tabs>
-        </div>
+        </motion.div>
 
         {/* Related products */}
         {relatedProducts.length > 0 && (
-          <div className="mt-16">
-            <h2 className="font-display text-2xl font-bold mb-8">You May Also Like</h2>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+            className="mt-12 md:mt-20"
+          >
+            <div className="flex items-center justify-between mb-6 md:mb-8">
+              <h2 className="font-display text-xl md:text-2xl font-bold text-foreground">
+                You May Also Like
+              </h2>
+              <Button variant="ghost" asChild className="text-primary">
+                <Link to={`/products?category=${product.category?.slug || ''}`}>
+                  View All
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Link>
+              </Button>
+            </div>
             <ProductGrid products={relatedProducts} />
-          </div>
+          </motion.div>
         )}
       </div>
     </Layout>

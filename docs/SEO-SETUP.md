@@ -237,3 +237,6 @@ For issues or questions about SEO implementation, refer to:
 - [Schema.org Documentation](https://schema.org/)
 - [Sitemap Protocol](https://www.sitemaps.org/protocol.html)
 
+
+
+

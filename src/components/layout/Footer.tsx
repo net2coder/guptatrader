@@ -28,7 +28,7 @@ export function Footer() {
           <div>
             <h4 className="font-display text-xl font-bold mb-4">{storeName}</h4>
             <p className="text-background/70 mb-6">
-              Crafting beautiful spaces with quality furniture since 1985. Your trusted
+              Crafting beautiful spaces with quality furniture since 1961. Your trusted
               partner for home and office furnishing.
             </p>
             <div className="flex gap-4">
