@@ -54,6 +54,7 @@ export default function AuthPage() {
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
   const [passwordUpdateSuccess, setPasswordUpdateSuccess] = useState(false);
+  const [signupEmail, setSignupEmail] = useState<string | null>(null);
   const { signIn, signUp, resetPassword, updatePassword, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -147,6 +148,10 @@ export default function AuthPage() {
       signUpForm.setError('root', { 
         message: 'Unable to create account. Please check your details and try again.' 
       });
+    } else {
+      // Store email and show confirmation prompt
+      setSignupEmail(data.email);
+      signUpForm.reset();
     }
   };
 
@@ -306,6 +311,75 @@ export default function AuthPage() {
                     </Button>
                   </form>
                 )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Show email verification prompt after successful signup
+  if (signupEmail) {
+    return (
+      <Layout>
+        <div className="min-h-[80vh] flex items-center justify-center py-12 px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full max-w-md"
+          >
+            <Card className="border-border/50 shadow-elegant">
+              <CardHeader className="text-center pb-4">
+                <div className="flex justify-center mb-4">
+                  <div className="h-16 w-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Mail className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </div>
+                <CardTitle className="font-display text-2xl">
+                  Verify Your Email
+                </CardTitle>
+                <CardDescription>
+                  We've sent a confirmation link to your email
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-foreground">
+                    <span className="font-semibold">Confirmation sent to:</span>
+                    <br className="mt-1" />
+                    <code className="text-xs break-all">{signupEmail}</code>
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Please check your email and click the confirmation link to activate your account. The link will expire in 24 hours.
+                  </p>
+                  
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                    <p className="text-xs text-amber-800 dark:text-amber-300">
+                      <strong>Tip:</strong> If you don't see the email, check your spam or junk folder.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Button 
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setSignupEmail(null);
+                      setActiveTab('signin');
+                    }}
+                  >
+                    Back to Sign In
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Once you confirm your email, you'll be able to sign in with your credentials.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

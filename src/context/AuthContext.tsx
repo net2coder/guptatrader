@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       toast({
         title: 'Account created!',
-        description: 'Welcome to Gupta Traders. You are now signed in.',
+        description: 'Please check your email to verify your account before signing in.',
       });
 
       return { error: null };

@@ -1,39 +1,97 @@
 # Gupta Traders - Robots.txt
-# https://www.guptatraders.net
+# SEO Optimized - Last updated: January 1, 2026
+# Domain: https://www.guptatraders.net
 
-# Allow all search engines
+# Default rules for all search engines
 User-agent: *
 Allow: /
 Allow: /products
-Allow: /product/
+Allow: /products/
+Allow: /sitemap.xml
+Allow: /sitemap-products.xml
 
-# Disallow private/user-specific pages
+# Disallow admin and authentication pages
 Disallow: /admin
-Disallow: /admin/*
+Disallow: /admin/
 Disallow: /auth
+Disallow: /auth/
 Disallow: /profile
-Disallow: /checkout
-Disallow: /order-confirmation
-Disallow: /cart
-Disallow: /wishlist
+Disallow: /profile/
 
-# Allow social media crawlers
+# Disallow user-specific and transactional pages
+Disallow: /checkout
+Disallow: /checkout/
+Disallow: /order-confirmation
+Disallow: /order-confirmation/
+Disallow: /cart
+Disallow: /cart/
+Disallow: /wishlist
+Disallow: /wishlist/
+
+# Disallow query parameters that create duplicate content
+Disallow: /*?
+Disallow: /*&
+Disallow: /*utm_
+
+# Allow Google to crawl AMP and mobile versions
+User-agent: Googlebot
+Allow: /
+Allow: /products
+Allow: /products/
+
+# Allow Bing search engine
+User-agent: Bingbot
+Allow: /
+Allow: /products
+Allow: /products/
+Crawl-delay: 1
+
+# Allow social media crawlers for rich snippets
 User-agent: Twitterbot
 Allow: /
+Allow: /products
+Allow: /products/
 Disallow: /admin
 Disallow: /auth
-Disallow: /profile
+Disallow: /cart
 Disallow: /checkout
 
 User-agent: facebookexternalhit
 Allow: /
+Allow: /products
+Allow: /products/
 Disallow: /admin
 Disallow: /auth
-Disallow: /profile
+Disallow: /cart
 Disallow: /checkout
 
-# Crawl-delay for respectful crawling
+User-agent: linkedinbot
+Allow: /
+Allow: /products
+Allow: /products/
+Disallow: /admin
+Disallow: /auth
+
+User-agent: whatsapp
+Allow: /
+Allow: /products
+Allow: /products/
+Disallow: /admin
+
+# Allow Pinterest crawler
+User-agent: pinterestbot
+Allow: /
+Allow: /products
+Allow: /products/
+
+# Respectful crawl rate for general crawlers
 Crawl-delay: 1
 
-# Sitemap location
+# Request rate for Googlebot (1 second between requests)
+User-agent: Googlebot
+Crawl-delay: 0.5
+Request-rate: 60/60
+
+# Sitemap locations
 Sitemap: https://www.guptatraders.net/sitemap.xml
+Sitemap: https://www.guptatraders.net/sitemap-products.xml
