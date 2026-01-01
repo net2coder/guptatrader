@@ -6,7 +6,9 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { formatPrice } from '@/lib/utils';
+import { useShippingZones } from '@/hooks/useAdmin';
+import { formatPrice, calculateShippingAmountLegacy, ShippingZone, ShippingSettings } from '@/lib/utils';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,8 @@ export default function CartPage() {
   const { getCartItems, updateQuantity, removeFromCart, getCartTotal, clearCart, isLoading } =
     useCart();
   const { user } = useAuth();
+  const { data: shippingZones = [] } = useShippingZones();
+  const { data: storeSettings } = useStoreSettings();
   const navigate = useNavigate();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
 
@@ -32,7 +36,16 @@ export default function CartPage() {
   const cartItems = getCartItems();
   const cartTotal = getCartTotal();
 
-  const deliveryCharge = cartTotal >= 10000 ? 0 : 999;
+  // Convert store settings to ShippingSettings type
+  const shippingSettings: ShippingSettings | undefined = storeSettings ? {
+    free_shipping_threshold: Number(storeSettings?.free_shipping_threshold) || 10000,
+    distance_free_radius: Number(storeSettings?.distance_free_radius) || 5,
+    shipping_per_km_rate: Number(storeSettings?.shipping_per_km_rate) || 100,
+    base_shipping_rate: Number(storeSettings?.base_shipping_rate) || 500,
+  } : undefined;
+
+  // Calculate delivery charge dynamically based on admin-configured zones and settings (without distance)
+  const deliveryCharge = calculateShippingAmountLegacy(cartTotal, (shippingZones as ShippingZone[]) || [], shippingSettings);
   const totalWithDelivery = cartTotal + deliveryCharge;
 
   if (isLoading) {
@@ -222,9 +235,9 @@ export default function CartPage() {
                     )}
                   </span>
                 </div>
-                {deliveryCharge > 0 && (
+                {deliveryCharge > 0 && shippingZones.length > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Add {formatPrice(10000 - cartTotal)} more for free delivery
+                    Add {formatPrice((shippingZones.find(z => z.is_active)?.free_shipping_threshold ?? 10000) - cartTotal)} more for free delivery
                   </p>
                 )}
               </div>

@@ -74,7 +74,7 @@ export default function AdminSettings() {
     name: '',
     regions: '',
     base_rate: 0,
-    per_kg_rate: 0,
+    per_km_rate: 0,
     free_shipping_threshold: 0,
     estimated_days_min: 3,
     estimated_days_max: 7,
@@ -124,7 +124,7 @@ export default function AdminSettings() {
       name: '',
       regions: '',
       base_rate: 0,
-      per_kg_rate: 0,
+      per_km_rate: 0,
       free_shipping_threshold: 0,
       estimated_days_min: 3,
       estimated_days_max: 7,
@@ -139,7 +139,7 @@ export default function AdminSettings() {
       name: zone.name,
       regions: zone.regions.join(', '),
       base_rate: zone.base_rate,
-      per_kg_rate: zone.per_kg_rate || 0,
+      per_km_rate: zone.per_km_rate || 0,
       free_shipping_threshold: zone.free_shipping_threshold || 0,
       estimated_days_min: zone.estimated_days_min,
       estimated_days_max: zone.estimated_days_max,
@@ -153,7 +153,7 @@ export default function AdminSettings() {
       name: zoneForm.name,
       regions: zoneForm.regions.split(',').map(r => r.trim()).filter(Boolean),
       base_rate: zoneForm.base_rate,
-      per_kg_rate: zoneForm.per_kg_rate || null,
+      per_km_rate: zoneForm.per_km_rate || null,
       free_shipping_threshold: zoneForm.free_shipping_threshold || null,
       estimated_days_min: zoneForm.estimated_days_min,
       estimated_days_max: zoneForm.estimated_days_max,
@@ -590,11 +590,11 @@ export default function AdminSettings() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs font-medium">Per KG Rate (₹)</Label>
+                            <Label className="text-xs font-medium">Per Km Rate (₹)</Label>
                             <Input
                               type="number"
-                              value={zoneForm.per_kg_rate}
-                              onChange={(e) => setZoneForm({ ...zoneForm, per_kg_rate: Number(e.target.value) })}
+                              value={zoneForm.per_km_rate}
+                              onChange={(e) => setZoneForm({ ...zoneForm, per_km_rate: Number(e.target.value) })}
                               className="bg-muted/50 border-0"
                             />
                           </div>

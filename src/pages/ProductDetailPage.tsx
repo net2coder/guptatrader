@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProductGrid } from '@/components/products/ProductGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProduct, useProducts } from '@/hooks/useProducts';
+import { useShippingZones } from '@/hooks/useAdmin';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { toast } from 'sonner';
@@ -31,6 +32,7 @@ export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { data: product, isLoading } = useProduct(slug || '');
+  const { data: shippingZones = [] } = useShippingZones();
   const [quantity, setQuantity] = useState(1);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { addToCart, isInCart } = useCart();
@@ -40,6 +42,10 @@ export default function ProductDetailPage() {
   const relatedProducts = allProducts
     ?.filter(p => p.category_id === product?.category_id && p.id !== product?.id)
     .slice(0, 4) || [];
+
+  // Get free shipping threshold from active shipping zone
+  const activeZone = shippingZones.find(zone => zone.is_active);
+  const freeShippingThreshold = activeZone?.free_shipping_threshold ?? 10000;
 
   if (isLoading) {
     return (
@@ -335,9 +341,7 @@ export default function ProductDetailPage() {
               {inStock ? (
                 <div className="flex items-center gap-2 text-success">
                   <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                  <span className="font-medium text-sm">
-                    In Stock ({product.stock_quantity} available)
-                  </span>
+                  <span className="font-medium text-sm">Available</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-destructive">
@@ -416,7 +420,7 @@ export default function ProductDetailPage() {
             {/* Features - Cards on mobile, inline on desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
               {[
-                { icon: Truck, title: 'Free Delivery', desc: 'On orders above ₹10,000' },
+                { icon: Truck, title: 'Free Delivery', desc: `On orders above ₹${freeShippingThreshold.toLocaleString()}` },
                 { icon: Shield, title: '5 Year Warranty', desc: 'Manufacturer warranty' },
                 { icon: Award, title: 'Best Price', desc: 'Quality at best prices' },
               ].map(({ icon: Icon, title, desc }) => (
@@ -513,7 +517,7 @@ export default function ProductDetailPage() {
                     <div>
                       <h3 className="font-semibold text-foreground mb-2">Shipping</h3>
                       <p className="text-muted-foreground text-sm leading-relaxed">
-                        Free shipping on orders above ₹10,000. Standard delivery takes 5-7
+                        Free shipping on orders above ₹{freeShippingThreshold.toLocaleString()}. Standard delivery takes 5-7
                         business days. Express delivery available at additional cost.
                       </p>
                     </div>

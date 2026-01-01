@@ -211,6 +211,8 @@ export function useCreateOrder() {
       discountAmount,
       couponCode,
       customerGstNumber,
+      deliveryDistance,
+      shippingBreakdown,
     }: {
       items: { productId: string; quantity: number; name: string; sku?: string; price: number }[];
       shippingAddress: Order['shipping_address'];
@@ -218,6 +220,8 @@ export function useCreateOrder() {
       discountAmount?: number;
       couponCode?: string;
       customerGstNumber?: string;
+      deliveryDistance?: number;
+      shippingBreakdown?: any;
     }) => {
       // Prepare items for the RPC function
       const itemsJsonb = items.map(item => ({
@@ -244,6 +248,26 @@ export function useCreateOrder() {
           .from('orders')
           .update({ customer_gst_number: customerGstNumber.trim() })
           .eq('id', orderId);
+      }
+
+      // Update with delivery distance and shipping breakdown if provided
+      if (deliveryDistance !== undefined || shippingBreakdown) {
+        const updates: Record<string, any> = {};
+        
+        if (deliveryDistance !== undefined) {
+          updates.delivery_distance = deliveryDistance;
+        }
+        
+        if (shippingBreakdown) {
+          updates.shipping_breakdown = shippingBreakdown;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await supabase
+            .from('orders')
+            .update(updates)
+            .eq('id', orderId);
+        }
       }
 
       // Fetch the created order to return

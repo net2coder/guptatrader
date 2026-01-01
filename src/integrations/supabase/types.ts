@@ -779,7 +779,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
-          per_kg_rate: number | null
+          per_km_rate: number | null
           regions: string[]
           updated_at: string | null
         }
@@ -792,7 +792,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
-          per_kg_rate?: number | null
+          per_km_rate?: number | null
           regions?: string[]
           updated_at?: string | null
         }
@@ -805,7 +805,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
-          per_kg_rate?: number | null
+          per_km_rate?: number | null
           regions?: string[]
           updated_at?: string | null
         }

@@ -8,7 +8,7 @@ export interface ShippingZone {
   name: string;
   regions: string[];
   base_rate: number;
-  per_kg_rate: number | null;
+  per_km_rate: number | null;
   free_shipping_threshold: number | null;
   estimated_days_min: number;
   estimated_days_max: number;

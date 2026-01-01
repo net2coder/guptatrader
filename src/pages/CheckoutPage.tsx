@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, MapPin, Plus, Ticket, ShoppingBag, Phone, User, AlertCircle, FileText } from 'lucide-react';
+import { ArrowLeft, MapPin, Plus, Ticket, ShoppingBag, Phone, User, AlertCircle, FileText, Navigation } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,11 @@ import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCreateOrder } from '@/hooks/useOrders';
+import { useShippingZones } from '@/hooks/useAdmin';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, calculateShippingAmount, ShippingBreakdown, ShippingZone, ShippingSettings } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -48,6 +50,8 @@ export default function CheckoutPage() {
   const { getCartItems, getCartTotal, clearCart, isLoading: cartLoading } = useCart();
   const { toast } = useToast();
   const createOrder = useCreateOrder();
+  const { data: shippingZones = [] } = useShippingZones();
+  const { data: storeSettings } = useStoreSettings();
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -61,6 +65,9 @@ export default function CheckoutPage() {
 
   // GST Number (optional)
   const [customerGstNumber, setCustomerGstNumber] = useState('');
+
+  // Distance-based shipping
+  const [deliveryDistance, setDeliveryDistance] = useState<number>(0);
 
   // Guest checkout fields
   const [guestEmail, setGuestEmail] = useState('');
@@ -78,7 +85,25 @@ export default function CheckoutPage() {
   const cartItems = getCartItems();
   const subtotal = getCartTotal();
   const taxAmount = subtotal * 0.18; // 18% GST
-  const shippingAmount = subtotal >= 10000 ? 0 : 500;
+  
+  // Convert store settings to ShippingSettings type
+  const shippingSettings: ShippingSettings | undefined = storeSettings ? {
+    free_shipping_threshold: Number(storeSettings?.free_shipping_threshold) || 10000,
+    distance_free_radius: Number(storeSettings?.distance_free_radius) || 5,
+    shipping_per_km_rate: Number(storeSettings?.shipping_per_km_rate) || 100,
+    base_shipping_rate: Number(storeSettings?.base_shipping_rate) || 500,
+  } : undefined;
+
+  // Calculate shipping dynamically based on admin-configured zones, settings, and distance
+  const shippingResult = calculateShippingAmount(
+    subtotal,
+    deliveryDistance,
+    (shippingZones as ShippingZone[]) || [],
+    shippingSettings
+  );
+  const shippingAmount = shippingResult.amount;
+  const shippingBreakdown: ShippingBreakdown | null = shippingResult.breakdown;
+  
   const discountAmount = appliedCoupon?.valid ? appliedCoupon.discount_amount : 0;
   const totalAmount = subtotal + taxAmount + shippingAmount - discountAmount;
 
@@ -213,6 +238,8 @@ export default function CheckoutPage() {
         discountAmount: discountAmount,
         couponCode: appliedCoupon?.valid ? couponCode.toUpperCase() : undefined,
         customerGstNumber: customerGstNumber.trim() || undefined,
+        deliveryDistance: deliveryDistance,
+        shippingBreakdown: shippingBreakdown,
       });
 
       // Clear cart after successful order
@@ -341,6 +368,93 @@ export default function CheckoutPage() {
                     <div className="bg-muted/50 rounded-lg p-4 mb-4">
                       <p className="text-sm text-muted-foreground flex items-center gap-2">
                         <AlertCircle className="h-4 w-4" />
+                        Guest checkout - Please enter your details below
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Delivery Distance */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Navigation className="h-5 w-5" />
+                  Delivery Distance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="distance">Distance from Store (km)</Label>
+                    <Input
+                      id="distance"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={deliveryDistance}
+                      onChange={(e) => setDeliveryDistance(Math.max(0, parseFloat(e.target.value) || 0))}
+                      placeholder="Enter distance in kilometers"
+                      className="mt-2"
+                    />
+                  </div>
+                  {deliveryDistance > 0 && shippingBreakdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm space-y-1"
+                    >
+                      <p className="font-medium text-blue-900 dark:text-blue-200">
+                        Shipping Breakdown
+                      </p>
+                      {shippingBreakdown.is_free_shipping ? (
+                        <p className="text-green-600 dark:text-green-400 font-medium">
+                          ✓ Free Shipping (within {shippingBreakdown.distance_free_radius}km radius)
+                        </p>
+                      ) : (
+                        <>
+                          <p className="text-muted-foreground">
+                            Order Value: {formatPrice(shippingBreakdown.order_value)} {shippingBreakdown.order_value >= shippingBreakdown.free_shipping_threshold ? '✓' : `(need ₹${shippingBreakdown.free_shipping_threshold - shippingBreakdown.order_value} more)`}
+                          </p>
+                          {shippingBreakdown.base_rate > 0 && (
+                            <p className="text-muted-foreground">
+                              Base Rate: {formatPrice(shippingBreakdown.base_rate)}
+                            </p>
+                          )}
+                          {shippingBreakdown.distance_charged > 0 && (
+                            <p className="text-muted-foreground">
+                              Distance Charge: {shippingBreakdown.distance_charged.toFixed(1)}km × {formatPrice(shippingBreakdown.per_km_rate)}/km = {formatPrice(shippingBreakdown.distance_charge)}
+                            </p>
+                          )}
+                          <Separator className="my-2" />
+                          <p className="font-medium text-blue-900 dark:text-blue-200">
+                            Total Shipping: {formatPrice(shippingBreakdown.total_shipping_charge)}
+                          </p>
+                        </>
+                      )}
+                    </motion.div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Enter the distance from our store to your delivery address. Free delivery applies within {shippingBreakdown?.distance_free_radius || 5}km for eligible orders.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {user ? null : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Guest Checkout
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="bg-muted/50 rounded-lg p-4 mb-4">
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
                         Guest checkout - Your order details will be sent to your email
                       </p>
                     </div>
@@ -435,9 +549,9 @@ export default function CheckoutPage() {
                       </Button>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Coupon */}
             <Card>
@@ -583,12 +697,17 @@ export default function CheckoutPage() {
                     <span className="text-muted-foreground">Shipping</span>
                     <span>
                       {shippingAmount === 0 ? (
-                        <span className="text-green-600">Free</span>
+                        <span className="text-green-600 font-medium">Free</span>
                       ) : (
-                        formatPrice(shippingAmount)
+                        <span>{formatPrice(shippingAmount)}</span>
                       )}
                     </span>
                   </div>
+                  {deliveryDistance > 0 && shippingBreakdown && shippingBreakdown.distance_charged > 0 && (
+                    <p className="text-xs text-muted-foreground text-right">
+                      {shippingBreakdown.distance_charged.toFixed(1)}km beyond free radius
+                    </p>
+                  )}
                   {discountAmount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Discount</span>

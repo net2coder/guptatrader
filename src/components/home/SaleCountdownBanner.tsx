@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Tag, Clock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAnnouncementCoupons } from '@/hooks/useCoupons';
+import { useShippingZones } from '@/hooks/useAdmin';
 
 interface TimeLeft {
   days: number;
@@ -41,7 +42,12 @@ function TimeBlock({ value, label }: { value: number; label: string }) {
 
 export function SaleCountdownBanner() {
   const { data: coupons = [] } = useAnnouncementCoupons();
+  const { data: shippingZones = [] } = useShippingZones();
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
+  
+  // Get free shipping threshold from active shipping zone
+  const activeZone = shippingZones.find(zone => zone.is_active);
+  const freeShippingThreshold = activeZone?.free_shipping_threshold ?? 10000;
   
   // Use sessionStorage to persist dismissed state across navigations
   const getDismissed = (): string[] => {
@@ -94,7 +100,7 @@ export function SaleCountdownBanner() {
   if (!activeSale || !timeLeft) {
     return (
       <div className="bg-primary text-primary-foreground py-2 text-center text-sm">
-        <p>Free delivery on orders above ₹10,000 | Use code WELCOME10 for 10% off</p>
+        <p>Free delivery on orders above ₹{freeShippingThreshold.toLocaleString()} | Use code WELCOME10 for 10% off</p>
       </div>
     );
   }

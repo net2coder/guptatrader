@@ -26,6 +26,10 @@ export interface StoreSettings {
   facebook_url: string;
   instagram_url: string;
   twitter_url: string;
+  free_shipping_threshold?: string;
+  distance_free_radius?: string;
+  shipping_per_km_rate?: string;
+  base_shipping_rate?: string;
 }
 
 export function useStoreSettings() {

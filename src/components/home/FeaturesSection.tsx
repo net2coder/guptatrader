@@ -1,30 +1,36 @@
 import { motion } from 'framer-motion';
 import { Truck, Shield, Headphones, RefreshCw } from 'lucide-react';
-
-const features = [
-  {
-    icon: Truck,
-    title: 'Free Delivery',
-    description: 'Free shipping on orders above ₹10,000 across India',
-  },
-  {
-    icon: Shield,
-    title: 'Quality Guarantee',
-    description: 'Premium materials with up to 10 years warranty',
-  },
-  {
-    icon: RefreshCw,
-    title: 'Easy Returns',
-    description: '30-day hassle-free returns and exchanges',
-  },
-  {
-    icon: Headphones,
-    title: '24/7 Support',
-    description: 'Round the clock customer support assistance',
-  },
-];
+import { useShippingZones } from '@/hooks/useAdmin';
 
 export function FeaturesSection() {
+  const { data: shippingZones = [] } = useShippingZones();
+  
+  // Get free shipping threshold from active shipping zone
+  const activeZone = shippingZones.find(zone => zone.is_active);
+  const freeShippingThreshold = activeZone?.free_shipping_threshold ?? 10000;
+
+  const features = [
+    {
+      icon: Truck,
+      title: 'Free Delivery',
+      description: `Free shipping on orders above ₹${freeShippingThreshold.toLocaleString()} across India`,
+    },
+    {
+      icon: Shield,
+      title: 'Quality Guarantee',
+      description: 'Premium materials with up to 10 years warranty',
+    },
+    {
+      icon: RefreshCw,
+      title: 'Easy Returns',
+      description: '30-day hassle-free returns and exchanges',
+    },
+    {
+      icon: Headphones,
+      title: '24/7 Support',
+      description: 'Round the clock customer support assistance',
+    },
+  ];
   return (
     <section className="py-16 bg-primary text-primary-foreground">
       <div className="container">

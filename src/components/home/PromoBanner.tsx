@@ -3,9 +3,15 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAnnouncementCoupons } from '@/hooks/useCoupons';
+import { useShippingZones } from '@/hooks/useAdmin';
 
 export function PromoBanner() {
   const { data: coupons = [] } = useAnnouncementCoupons();
+  const { data: shippingZones = [] } = useShippingZones();
+  
+  // Get free shipping threshold from active shipping zone
+  const activeZone = shippingZones.find(zone => zone.is_active);
+  const freeShippingThreshold = activeZone?.free_shipping_threshold ?? 10000;
 
   // If no announcement coupons, show default promo or hide
   if (coupons.length === 0) {
@@ -27,10 +33,10 @@ export function PromoBanner() {
                 Free Shipping
               </p>
               <h2 className="font-display text-3xl md:text-5xl font-bold text-primary-foreground mb-6">
-                Free Delivery on Orders Above ₹10,000
+                Free Delivery on Orders Above ₹{freeShippingThreshold.toLocaleString()}
               </h2>
               <p className="text-primary-foreground/90 text-lg mb-8">
-                Shop now and enjoy free delivery on all orders above ₹10,000.
+                Shop now and enjoy free delivery on all orders above ₹{freeShippingThreshold.toLocaleString()}.
               </p>
               <Button
                 asChild
