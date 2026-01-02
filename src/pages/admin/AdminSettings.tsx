@@ -70,13 +70,12 @@ export default function AdminSettings() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const [isZoneDialogOpen, setIsZoneDialogOpen] = useState(false);
-  const [editingZone, setEditingZone] = useState<any>(null);
+  const [editingZone, setEditingZone] = useState<ShippingZone | null>(null);
   const [zoneForm, setZoneForm] = useState({
     name: '',
     regions: '',
-    base_rate: 0,
     per_km_rate: 0,
-    free_shipping_threshold: 0,
+    free_shipping_threshold: 10000,
     estimated_days_min: 3,
     estimated_days_max: 7,
     is_active: true,
@@ -97,6 +96,7 @@ export default function AdminSettings() {
     facebook_url: '',
     instagram_url: '',
     twitter_url: '',
+    warranty_terms: '',
   });
 
   useEffect(() => {
@@ -116,6 +116,7 @@ export default function AdminSettings() {
         facebook_url: storeSettings.facebook_url || '',
         instagram_url: storeSettings.instagram_url || '',
         twitter_url: storeSettings.twitter_url || '',
+        warranty_terms: storeSettings.warranty_terms || '',
       });
     }
   }, [storeSettings]);
@@ -124,9 +125,8 @@ export default function AdminSettings() {
     setZoneForm({
       name: '',
       regions: '',
-      base_rate: 0,
       per_km_rate: 0,
-      free_shipping_threshold: 0,
+      free_shipping_threshold: 10000,
       estimated_days_min: 3,
       estimated_days_max: 7,
       is_active: true,
@@ -139,7 +139,6 @@ export default function AdminSettings() {
     setZoneForm({
       name: zone.name,
       regions: zone.regions.join(', '),
-      base_rate: zone.base_rate,
       per_km_rate: zone.per_km_rate || 0,
       free_shipping_threshold: zone.free_shipping_threshold || 0,
       estimated_days_min: zone.estimated_days_min,
@@ -150,10 +149,19 @@ export default function AdminSettings() {
   };
 
   const handleSaveZone = async () => {
+    // Validation: Ensure threshold is greater than 0
+    if (zoneForm.free_shipping_threshold <= 0) {
+      toast({
+        title: 'Invalid Threshold',
+        description: 'Free Shipping Threshold must be greater than ₹0.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const zoneData = {
       name: zoneForm.name,
       regions: zoneForm.regions.split(',').map(r => r.trim()).filter(Boolean),
-      base_rate: zoneForm.base_rate,
       per_km_rate: zoneForm.per_km_rate || null,
       free_shipping_threshold: zoneForm.free_shipping_threshold || null,
       estimated_days_min: zoneForm.estimated_days_min,
@@ -195,8 +203,9 @@ export default function AdminSettings() {
 
       setLocalSettings(prev => ({ ...prev, site_logo_url: publicUrl }));
       toast({ title: 'Logo uploaded successfully' });
-    } catch (error: any) {
-      toast({ title: 'Error uploading logo', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload logo';
+      toast({ title: 'Error uploading logo', description: errorMessage, variant: 'destructive' });
     } finally {
       setUploadingLogo(false);
     }
@@ -335,6 +344,36 @@ export default function AdminSettings() {
                       className="bg-muted/50 border-0 resize-none"
                       placeholder="Full store address"
                     />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Warranty Terms & Conditions */}
+              <Card className="admin-card border-0">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-green-500/10 text-green-500">
+                      <Shield className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Warranty Terms & Conditions</CardTitle>
+                      <CardDescription className="text-xs">Configure warranty terms displayed to customers for products with warranty enabled</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Warranty Terms & Conditions</Label>
+                    <Textarea
+                      value={localSettings.warranty_terms}
+                      onChange={(e) => setLocalSettings({ ...localSettings, warranty_terms: e.target.value })}
+                      rows={8}
+                      className="bg-muted/50 border-0 resize-none"
+                      placeholder="Enter warranty terms and conditions that will be displayed to customers when viewing products with warranty enabled..."
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      These terms will be displayed on product pages, order summaries, and invoices for products with warranty enabled.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -580,25 +619,14 @@ export default function AdminSettings() {
                             className="bg-muted/50 border-0"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium">Base Rate (₹)</Label>
-                            <Input
-                              type="number"
-                              value={zoneForm.base_rate}
-                              onChange={(e) => setZoneForm({ ...zoneForm, base_rate: Number(e.target.value) })}
-                              className="bg-muted/50 border-0"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs font-medium">Per Km Rate (₹)</Label>
-                            <Input
-                              type="number"
-                              value={zoneForm.per_km_rate}
-                              onChange={(e) => setZoneForm({ ...zoneForm, per_km_rate: Number(e.target.value) })}
-                              className="bg-muted/50 border-0"
-                            />
-                          </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Per Km Rate (₹)</Label>
+                          <Input
+                            type="number"
+                            value={zoneForm.per_km_rate}
+                            onChange={(e) => setZoneForm({ ...zoneForm, per_km_rate: Number(e.target.value) })}
+                            className="bg-muted/50 border-0"
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-xs font-medium">Free Shipping Threshold (₹)</Label>
@@ -606,8 +634,12 @@ export default function AdminSettings() {
                             type="number"
                             value={zoneForm.free_shipping_threshold}
                             onChange={(e) => setZoneForm({ ...zoneForm, free_shipping_threshold: Number(e.target.value) })}
-                            className="bg-muted/50 border-0"
+                            min="1"
+                            className={`bg-muted/50 border-0 ${zoneForm.free_shipping_threshold <= 0 ? 'border-red-500' : ''}`}
                           />
+                          {zoneForm.free_shipping_threshold <= 0 && (
+                            <p className="text-xs text-red-500">⚠️ Must be greater than ₹0</p>
+                          )}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -639,7 +671,17 @@ export default function AdminSettings() {
                       </div>
                       <DialogFooter>
                         <Button variant="ghost" onClick={() => setIsZoneDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSaveZone} disabled={createZone.isPending || updateZone.isPending} className="gap-2">
+                        <Button 
+                          onClick={handleSaveZone} 
+                          disabled={
+                            createZone.isPending || 
+                            updateZone.isPending || 
+                            !zoneForm.name || 
+                            !zoneForm.regions ||
+                            zoneForm.free_shipping_threshold <= 0
+                          } 
+                          className="gap-2"
+                        >
                           <Save className="h-4 w-4" />
                           {createZone.isPending || updateZone.isPending ? 'Saving...' : 'Save'}
                         </Button>
@@ -680,7 +722,7 @@ export default function AdminSettings() {
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="text-right hidden sm:block">
-                              <p className="text-sm font-medium">₹{zone.base_rate}</p>
+                              <p className="text-sm font-medium">₹{zone.free_shipping_threshold}</p>
                               <p className="text-xs text-muted-foreground">
                                 {zone.estimated_days_min}-{zone.estimated_days_max} days
                               </p>

@@ -86,23 +86,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       const cartItems: CartItem[] = (data || [])
-        .filter((item: any) => item.product) // Filter out items with deleted products
-        .map((item: any) => {
+        .filter((item: { product: unknown }) => item.product) // Filter out items with deleted products
+        .map((item: { product_id: string; quantity: number; product: Record<string, unknown> }) => {
           // Type assertion needed for product relation that may not be fully typed
-          const product = item.product as any;
+          const product = item.product;
           return {
             productId: item.product_id,
-            quantity: Math.min(item.quantity, product?.stock_quantity || 0),
+            quantity: Math.min(item.quantity, (product?.stock_quantity as number) || 0),
             product: {
-              id: product?.id,
-              name: product?.name,
-              slug: product?.slug,
+              id: product?.id as string,
+              name: product?.name as string,
+              slug: product?.slug as string,
               price: Number(product?.price),
               compare_at_price: product?.compare_at_price ? Number(product?.compare_at_price) : null,
-              stock_quantity: product?.stock_quantity,
-              material: product?.material,
+              stock_quantity: product?.stock_quantity as number,
+              material: product?.material as string | null,
               category: product?.category,
-              images: (product?.images || []).sort((a: any, b: any) => {
+              images: ((product?.images || []) as Array<{ is_primary?: boolean; sort_order?: number; image_url: string }>).sort((a, b) => {
                 if (a.is_primary && !b.is_primary) return -1;
                 if (!a.is_primary && b.is_primary) return 1;
                 return (a.sort_order || 0) - (b.sort_order || 0);
@@ -119,28 +119,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  // Initialize cart
-  useEffect(() => {
-    if (user) {
-      // Migrate guest cart to database if needed
-      const guestCart = loadGuestCart();
-      if (guestCart.length > 0) {
-        migrateGuestCartToDatabase(guestCart).then(() => {
-          localStorage.removeItem(CART_STORAGE_KEY);
-          fetchDatabaseCart();
-        });
-      } else {
-        fetchDatabaseCart();
-      }
-    } else {
-      // Load guest cart
-      const guestCart = loadGuestCart();
-      setItems(guestCart);
-    }
-  }, [user, loadGuestCart, fetchDatabaseCart]);
-
   // Migrate guest cart to database
-  const migrateGuestCartToDatabase = async (guestCart: CartItem[]) => {
+  const migrateGuestCartToDatabase = useCallback(async (guestCart: CartItem[]) => {
     if (!user || guestCart.length === 0) return;
 
     try {
@@ -173,7 +153,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error migrating cart:', error);
     }
-  };
+  }, [user]);
+
+  // Initialize cart
+  useEffect(() => {
+    if (user) {
+      // Migrate guest cart to database if needed
+      const guestCart = loadGuestCart();
+      if (guestCart.length > 0) {
+        migrateGuestCartToDatabase(guestCart).then(() => {
+          localStorage.removeItem(CART_STORAGE_KEY);
+          fetchDatabaseCart();
+        });
+      } else {
+        fetchDatabaseCart();
+      }
+    } else {
+      // Load guest cart
+      const guestCart = loadGuestCart();
+      setItems(guestCart);
+    }
+  }, [user, loadGuestCart, fetchDatabaseCart, migrateGuestCartToDatabase]);
 
   // Add to cart
   const addToCart = async (productId: string, quantity = 1) => {

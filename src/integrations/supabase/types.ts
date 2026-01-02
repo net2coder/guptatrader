@@ -771,7 +771,6 @@ export type Database = {
       }
       shipping_zones: {
         Row: {
-          base_rate: number
           created_at: string | null
           estimated_days_max: number | null
           estimated_days_min: number | null
@@ -784,7 +783,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          base_rate?: number
           created_at?: string | null
           estimated_days_max?: number | null
           estimated_days_min?: number | null
@@ -797,7 +795,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          base_rate?: number
           created_at?: string | null
           estimated_days_max?: number | null
           estimated_days_min?: number | null

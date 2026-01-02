@@ -1,8 +1,10 @@
 -- =====================================================
 -- COMPLETE SUPABASE DATABASE SETUP SCRIPT
--- E-Commerce Furniture Store - Production Ready
+-- Gupta Traders - E-Commerce Furniture Store
+-- Production Ready | Updated: January 2025
 -- =====================================================
 -- Run this script in a fresh Supabase project
+-- Includes: Authentication, Products, Orders, Coupons, Returns, Warranty System
 -- =====================================================
 
 -- =====================================================
@@ -143,6 +145,8 @@ CREATE TABLE IF NOT EXISTS public.products (
   low_stock_threshold INTEGER DEFAULT 5,
   is_active BOOLEAN DEFAULT true,
   is_featured BOOLEAN DEFAULT false,
+  has_warranty BOOLEAN DEFAULT false,
+  warranty_years INTEGER CHECK (warranty_years > 0 AND warranty_years <= 10),
   meta_title TEXT,
   meta_description TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -295,9 +299,10 @@ CREATE TABLE IF NOT EXISTS public.shipping_zones (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   regions TEXT[] NOT NULL DEFAULT '{}',
-  base_rate NUMERIC NOT NULL DEFAULT 0 CHECK (base_rate >= 0),
-  per_kg_rate NUMERIC DEFAULT 0 CHECK (per_kg_rate >= 0),
+  per_km_rate NUMERIC DEFAULT 0 CHECK (per_km_rate >= 0),
   free_shipping_threshold NUMERIC CHECK (free_shipping_threshold >= 0),
+  distance_free_radius NUMERIC DEFAULT 5 CHECK (distance_free_radius >= 0),
+  max_shipping_distance NUMERIC CHECK (max_shipping_distance >= 0),
   estimated_days_min INTEGER DEFAULT 3,
   estimated_days_max INTEGER DEFAULT 7,
   is_active BOOLEAN DEFAULT true,
@@ -360,6 +365,41 @@ CREATE TABLE IF NOT EXISTS public.about_content (
   content TEXT,
   image_url TEXT,
   sort_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 5.22 Warranty Terms Table
+CREATE TABLE IF NOT EXISTS public.warranty_terms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 5.23 Product Warranties Table
+CREATE TABLE IF NOT EXISTS public.product_warranties (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL UNIQUE REFERENCES public.products(id) ON DELETE CASCADE,
+  warranty_years INTEGER NOT NULL CHECK (warranty_years > 0 AND warranty_years <= 10),
+  is_enabled BOOLEAN DEFAULT true,
+  warranty_terms_id UUID REFERENCES public.warranty_terms(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 5.24 Order Item Warranties Table (tracks warranty for each ordered item)
+CREATE TABLE IF NOT EXISTS public.order_item_warranties (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_item_id UUID NOT NULL REFERENCES public.order_items(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+  warranty_years INTEGER NOT NULL,
+  warranty_start_date TIMESTAMPTZ NOT NULL DEFAULT now(),
+  warranty_end_date TIMESTAMPTZ NOT NULL,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -728,6 +768,7 @@ DECLARE
   v_total_amount DECIMAL(10,2);
   v_discount DECIMAL(10,2) := COALESCE(p_discount_amount, 0);
   v_coupon_id UUID;
+  v_free_threshold NUMERIC := 10000;
 BEGIN
   -- Validate inputs
   IF p_user_id IS NULL AND (p_guest_email IS NULL OR TRIM(p_guest_email) = '') THEN
@@ -766,10 +807,20 @@ BEGIN
   END LOOP;
 
   -- Calculate amounts
-  v_tax_amount := ROUND(v_subtotal * 0.18, 2);
-  v_shipping_amount := CASE WHEN v_subtotal >= 10000 THEN 0 ELSE 500 END;
+  -- NOTE: v_tax_amount is set to 0 because product prices are already GST-inclusive
+  -- No additional tax calculation needed in the new GST model
+  v_tax_amount := 0;
+  
+  -- Calculate shipping based on free_shipping_threshold from active shipping zone
+  -- Default fallback: free shipping above 10000, else 500 base rate
+  SELECT COALESCE(free_shipping_threshold, 10000)::NUMERIC INTO v_free_threshold 
+  FROM shipping_zones 
+  WHERE is_active = true 
+  LIMIT 1;
+  
+  v_shipping_amount := CASE WHEN v_subtotal >= v_free_threshold THEN 0 ELSE 500 END;
   v_discount := LEAST(v_discount, v_subtotal);
-  v_total_amount := v_subtotal + v_tax_amount + v_shipping_amount - v_discount;
+  v_total_amount := v_subtotal + v_shipping_amount - v_discount;
 
   -- Update coupon usage
   IF p_coupon_code IS NOT NULL AND TRIM(p_coupon_code) != '' AND v_discount > 0 THEN
@@ -1103,7 +1154,8 @@ INSERT INTO store_settings (key, value, type) VALUES
   ('order_confirmation_email', 'true', 'boolean'),
   ('shipping_confirmation_email', 'true', 'boolean'),
   ('return_window_days', '30', 'text'),
-  ('max_return_items', '10', 'text')
+  ('max_return_items', '10', 'text'),
+  ('warranty_terms', '', 'text')
 ON CONFLICT (key) DO NOTHING;
 
 -- Insert default about content
@@ -1335,24 +1387,33 @@ COMMENT ON TABLE public.store_settings IS 'Key-value store for global store conf
 COMMENT ON TABLE public.footer_items IS 'Manages footer navigation links organized by section.';
 
 -- =====================================================
--- SECTION 16: INITIALIZATION COMPLETE
--- =====================================================
-
--- Set admin email for new user handler (update with your admin email)
--- ALTER SYSTEM SET "app.settings.admin_email" = 'admin@guptatraders.com';
--- SELECT pg_reload_conf();
-
--- Verify setup
-
--- =====================================================
 -- SETUP COMPLETE
 -- =====================================================
 
 -- Database setup is now complete!
+-- 
 -- Next steps:
--- 1. Update admin email in handle_new_user function settings
--- 2. Set up storage bucket permissions in Supabase console
--- 3. Configure Firebase if needed
--- 4. Initialize default product categories
--- 5. Test admin login and product creation
--- 6. Configure email notifications if required
+-- 1. Run this SQL in Supabase SQL Editor
+-- 2. Update admin email in handle_new_user function settings
+-- 3. Configure storage bucket permissions in Supabase console
+-- 4. Set up Firebase if needed (optional)
+-- 5. Initialize default product categories
+-- 6. Test admin login and product creation
+-- 7. Configure email notifications if required
+--
+-- Features Included:
+-- ✓ Complete e-commerce schema
+-- ✓ User authentication & roles
+-- ✓ Product management with images & variants
+-- ✓ Shopping cart & wishlists
+-- ✓ Order management with status tracking
+-- ✓ Coupon & discount system
+-- ✓ Return management
+-- ✓ Warranty system
+-- ✓ Shipping zones
+-- ✓ Admin notifications & activity logs
+-- ✓ About page content management
+-- ✓ Footer management
+-- ✓ Row-level security (RLS)
+-- ✓ Comprehensive triggers & functions
+-- ✓ Production-ready database design

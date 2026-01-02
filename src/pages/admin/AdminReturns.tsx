@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { useReturns, useUpdateReturn } from '@/hooks/useAdmin';
+import { useReturns, useUpdateReturn, Return } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
 import { 
   Search,
@@ -44,7 +44,7 @@ const statusConfig: Record<string, { bg: string; text: string; icon: typeof Cloc
 export default function AdminReturns() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedReturn, setSelectedReturn] = useState<any>(null);
+  const [selectedReturn, setSelectedReturn] = useState<Return | null>(null);
   const [refundAmount, setRefundAmount] = useState<number>(0);
 
   const { data: returns = [], isLoading } = useReturns();

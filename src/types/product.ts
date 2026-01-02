@@ -20,6 +20,8 @@ export interface Product {
   meta_title: string | null;
   meta_description: string | null;
   category_id: string | null;
+  has_warranty: boolean;
+  warranty_years: number | null;
   created_at?: string;
   updated_at?: string;
   category?: {

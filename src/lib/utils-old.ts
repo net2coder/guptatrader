@@ -110,17 +110,17 @@ export function formatPriceWithGst(price: number, gstPercentage?: number): strin
 
 /**
  * Store settings for shipping configuration
- * NOTE: base_shipping_rate REMOVED - all shipping calculated based on distance only
  */
 export interface ShippingSettings {
   free_shipping_threshold: number;
   distance_free_radius: number;
   shipping_per_km_rate: number;
+  base_shipping_rate: number;
 }
 
 /**
  * Shipping zone type with all required properties
- * NOTE: base_rate REMOVED - shipping is calculated only on distance after threshold check
+ * NOTE: base_rate has been removed - shipping is calculated only on distance after threshold check
  */
 export interface ShippingZone {
   id?: string;
@@ -134,7 +134,7 @@ export interface ShippingZone {
 
 /**
  * Detailed shipping breakdown for order display
- * NOTE: base_rate REMOVED - only distance-based charges apply
+ * NOTE: base_rate removed - only distance-based charges apply
  */
 export interface ShippingBreakdown {
   distance_km: number;
@@ -152,17 +152,13 @@ export interface ShippingBreakdown {
  * Calculate shipping amount with distance-based logic
  * Uses dynamic thresholds from admin-configured shipping zones
  * 
- * ✓ FREE DELIVERY LOGIC (Strict):
- * Free delivery applies ONLY when BOTH conditions are met:
- * 1. Order value >= free_shipping_threshold (from admin settings)
- * 2. Delivery distance <= distance_free_radius (e.g., 5 km)
- * 
- * ✗ If ANY condition fails:
- * - No shipping amount shown on cart page
- * - Show: "Shipping charges will be calculated at checkout"
- * - At checkout: Calculate based on distance × per_km_rate
- * 
- * NOTE: Base rate concept completely removed
+ * Rules:
+ * 1. If order value >= free_shipping_threshold:
+ *    - Distance <= distance_free_radius: FREE SHIPPING (₹0)
+ *    - Distance > distance_free_radius: Charge = (distance - free_radius) × per_km_rate
+ * 2. If order value < free_shipping_threshold:
+ *    - Shipping = base_rate (if distance <= free_radius)
+ *    - Shipping = base_rate + (distance - free_radius) × per_km_rate (if distance > free_radius)
  * 
  * @param cartTotal - The subtotal of the cart
  * @param distance - Delivery distance in kilometers (default: 0)
@@ -179,6 +175,7 @@ export function calculateShippingAmount(
     free_shipping_threshold: 10000,
     distance_free_radius: 5,
     shipping_per_km_rate: 50,
+    base_shipping_rate: 500,
   };
 
   // Use defaults as starting point
@@ -192,6 +189,7 @@ export function calculateShippingAmount(
         free_shipping_threshold: activeZone.free_shipping_threshold ?? defaults.free_shipping_threshold,
         distance_free_radius: activeZone.distance_free_radius ?? defaults.distance_free_radius,
         shipping_per_km_rate: activeZone.per_km_rate ?? defaults.shipping_per_km_rate,
+        base_shipping_rate: activeZone.base_rate ?? defaults.base_shipping_rate,
       };
     }
   }
@@ -208,42 +206,48 @@ export function calculateShippingAmount(
   let totalShippingCharge = 0;
   let distanceCharge = 0;
   const distanceCharged = Math.max(0, actualDistance - settings.distance_free_radius);
-  let isFreeShipping = false;
 
-  // ✓ FREE DELIVERY: Both conditions must be met
-  // 1. cartTotal >= free_shipping_threshold
-  // 2. actualDistance <= distance_free_radius
-  if (
-    settings.free_shipping_threshold &&
-    settings.free_shipping_threshold > 0 &&
-    cartTotal >= settings.free_shipping_threshold &&
-    actualDistance <= settings.distance_free_radius
-  ) {
-    // ✓ FREE SHIPPING: Both conditions met
-    totalShippingCharge = 0;
-    distanceCharge = 0;
-    isFreeShipping = true;
-  } else if (distance > 0) {
-    // Distance entered: calculate charges based on distance
+  // CASE 1: Free shipping threshold is configured (greater than 0)
+  if (settings.free_shipping_threshold && settings.free_shipping_threshold > 0) {
+    if (cartTotal >= settings.free_shipping_threshold) {
+      // Order meets threshold: free delivery within distance_free_radius
+      if (actualDistance <= settings.distance_free_radius) {
+        totalShippingCharge = 0;
+        distanceCharge = 0;
+      } else {
+        // Beyond free radius: charge per km
+        distanceCharge = distanceCharged * settings.shipping_per_km_rate;
+        totalShippingCharge = distanceCharge;
+      }
+    } else {
+      // CASE 2: Order value < free shipping threshold
+      // Always apply base rate, plus distance charge if beyond free radius
+      totalShippingCharge = settings.base_shipping_rate;
+
+      if (actualDistance > settings.distance_free_radius) {
+        distanceCharge = distanceCharged * settings.shipping_per_km_rate;
+        totalShippingCharge += distanceCharge;
+      }
+    }
+  } else {
+    // CASE 3: No free shipping threshold configured (backward compatibility)
+    // Always charge base rate + distance charge
+    totalShippingCharge = settings.base_shipping_rate;
+
     if (actualDistance > settings.distance_free_radius) {
       distanceCharge = distanceCharged * settings.shipping_per_km_rate;
-      totalShippingCharge = distanceCharge;
+      totalShippingCharge += distanceCharge;
     }
-    isFreeShipping = false;
-  } else {
-    // No distance entered yet: default to no charge (will calculate at checkout)
-    // Don't set isFreeShipping = true unless threshold AND distance conditions are met
-    totalShippingCharge = 0;
-    isFreeShipping = false;
   }
 
   const breakdown: ShippingBreakdown = {
+    base_rate: settings.base_shipping_rate,
     distance_km: actualDistance,
     distance_free_radius: settings.distance_free_radius,
     distance_charged: distanceCharged,
     per_km_rate: settings.shipping_per_km_rate,
     distance_charge: distanceCharge,
-    is_free_shipping: isFreeShipping,
+    is_free_shipping: cartTotal >= settings.free_shipping_threshold && actualDistance <= settings.distance_free_radius,
     order_value: cartTotal,
     free_shipping_threshold: settings.free_shipping_threshold,
     total_shipping_charge: totalShippingCharge,
@@ -265,6 +269,6 @@ export function calculateShippingAmountLegacy(
   shippingZones?: ShippingZone[],
   shippingSettings?: ShippingSettings
 ): number {
-  const result = calculateShippingAmount(cartTotal, 0, shippingZones);
+  const result = calculateShippingAmount(cartTotal, 0, shippingZones, shippingSettings);
   return result.amount;
 }

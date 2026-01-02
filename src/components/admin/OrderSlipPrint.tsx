@@ -53,26 +53,37 @@ const OrderSlipPrint = forwardRef<HTMLDivElement, OrderSlipPrintProps>(
       <div ref={ref} className="p-8 bg-white text-black min-h-[297mm] w-[210mm] mx-auto font-sans">
         {/* Header */}
         <div className="flex justify-between items-start border-b-2 border-gray-800 pb-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {storeSettings?.store_name || 'Gharaunda'}
-            </h1>
-            {storeSettings?.store_address && (
-              <p className="text-sm text-gray-600 mt-1 max-w-xs">
-                {storeSettings.store_address}
-              </p>
+          <div className="flex items-start gap-4">
+            {/* Logo */}
+            {storeSettings?.site_logo_url && (
+              <img
+                src={storeSettings.site_logo_url}
+                alt={storeSettings.store_name || 'Store Logo'}
+                className="h-12 w-auto object-contain"
+                style={{ maxHeight: '60px', maxWidth: '150px' }}
+              />
             )}
-            {storeSettings?.store_phone && (
-              <p className="text-sm text-gray-600">Phone: {storeSettings.store_phone}</p>
-            )}
-            {storeSettings?.store_email && (
-              <p className="text-sm text-gray-600">Email: {storeSettings.store_email}</p>
-            )}
-            {storeSettings?.gst_number && (
-              <p className="text-sm font-medium text-gray-700 mt-2">
-                GSTIN: {storeSettings.gst_number}
-              </p>
-            )}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {storeSettings?.store_name || 'Gharaunda'}
+              </h1>
+              {storeSettings?.store_address && (
+                <p className="text-sm text-gray-600 mt-1 max-w-xs">
+                  {storeSettings.store_address}
+                </p>
+              )}
+              {storeSettings?.store_phone && (
+                <p className="text-sm text-gray-600">Phone: {storeSettings.store_phone}</p>
+              )}
+              {storeSettings?.store_email && (
+                <p className="text-sm text-gray-600">Email: {storeSettings.store_email}</p>
+              )}
+              {storeSettings?.gst_number && (
+                <p className="text-sm font-medium text-gray-700 mt-2">
+                  GSTIN: {storeSettings.gst_number}
+                </p>
+              )}
+            </div>
           </div>
           <div className="text-right">
             <h2 className="text-xl font-bold text-gray-900">ORDER SLIP / INVOICE</h2>
@@ -197,9 +208,9 @@ const OrderSlipPrint = forwardRef<HTMLDivElement, OrderSlipPrintProps>(
                 <span className="text-gray-600">Subtotal</span>
                 <span className="font-medium">{formatPrice(Number(order.subtotal))}</span>
               </div>
-              <div className="flex justify-between text-sm py-1">
-                <span className="text-gray-600">Tax (GST 18%)</span>
-                <span className="font-medium">{formatPrice(Number(order.tax_amount))}</span>
+              <div className="flex justify-between text-sm py-1 text-gray-500 italic">
+                <span className="text-xs">All taxes included</span>
+                <span className="text-xs">-</span>
               </div>
               <div className="flex justify-between text-sm py-1">
                 <span className="text-gray-600">Shipping</span>

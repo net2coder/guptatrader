@@ -24,6 +24,8 @@ export interface DbProduct {
   low_stock_threshold: number | null;
   is_active: boolean;
   is_featured: boolean;
+  has_warranty: boolean;
+  warranty_years: number | null;
   meta_title: string | null;
   meta_description: string | null;
   created_at: string;
@@ -184,6 +186,8 @@ export function useCreateProduct() {
       low_stock_threshold?: number;
       is_active?: boolean;
       is_featured?: boolean;
+      has_warranty?: boolean;
+      warranty_years?: number | null;
       meta_title?: string;
       meta_description?: string;
     }) => {

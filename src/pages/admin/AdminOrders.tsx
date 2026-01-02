@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { useAdminOrders, useUpdateOrderStatus, useDeleteOrder, OrderStatus, PaymentStatus, OrderItem } from '@/hooks/useOrders';
+import { useAdminOrders, useUpdateOrderStatus, useDeleteOrder, OrderStatus, PaymentStatus, OrderItem, Order } from '@/hooks/useOrders';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { formatPrice } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -32,7 +32,8 @@ import {
   Mail,
   Calendar,
   Receipt,
-  ArrowUpRight
+  ArrowUpRight,
+  Shield
 } from 'lucide-react';
 import {
   Select,
@@ -145,9 +146,9 @@ export default function AdminOrders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [trackingNumber, setTrackingNumber] = useState('');
-  const [orderToDelete, setOrderToDelete] = useState<any>(null);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -578,6 +579,21 @@ export default function AdminOrders() {
                     ))}
                   </div>
                 </div>
+
+                {/* Warranty Information */}
+                {storeSettings?.warranty_terms && (
+                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <Shield className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm text-green-900 dark:text-green-100 mb-2">Warranty Information</h4>
+                        <p className="text-xs text-green-700 dark:text-green-300 leading-relaxed whitespace-pre-line">
+                          {storeSettings.warranty_terms}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Tracking Number */}
                 {(selectedOrder.status === 'confirmed' || selectedOrder.status === 'processing') && (

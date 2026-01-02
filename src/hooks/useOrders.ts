@@ -117,7 +117,7 @@ export function useAdminOrders() {
         ?.filter(o => o.user_id)
         .map(o => o.user_id) || [];
       
-      let profilesMap: Record<string, { full_name: string | null; phone: string | null }> = {};
+      const profilesMap: Record<string, { full_name: string | null; phone: string | null }> = {};
       
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
@@ -254,7 +254,11 @@ export function useCreateOrder() {
 
       // Update with delivery distance and shipping breakdown if provided
       if (deliveryDistance !== undefined || shippingBreakdown) {
-        const updates: Record<string, any> = {};
+        interface OrderUpdate {
+          delivery_distance?: number;
+          shipping_breakdown?: ShippingBreakdown | null;
+        }
+        const updates: OrderUpdate = {};
         
         if (deliveryDistance !== undefined) {
           updates.delivery_distance = deliveryDistance;

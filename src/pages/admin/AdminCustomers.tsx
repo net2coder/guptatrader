@@ -129,10 +129,11 @@ export default function AdminCustomers() {
         title: customer.is_blocked ? 'Customer unblocked' : 'Customer blocked' 
       });
       refetch();
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update customer';
       toast({ 
         title: 'Error updating customer', 
-        description: error.message, 
+        description: errorMessage, 
         variant: 'destructive' 
       });
     }

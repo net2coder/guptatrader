@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useShippingZones } from '@/hooks/useAdmin';
-import { formatPrice, calculateShippingAmountLegacy, ShippingZone, ShippingSettings } from '@/lib/utils';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { formatPrice, ShippingZone } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -36,17 +36,16 @@ export default function CartPage() {
   const cartItems = getCartItems();
   const cartTotal = getCartTotal();
 
-  // Convert store settings to ShippingSettings type
-  const shippingSettings: ShippingSettings | undefined = storeSettings ? {
-    free_shipping_threshold: Number(storeSettings?.free_shipping_threshold) || 10000,
-    distance_free_radius: Number(storeSettings?.distance_free_radius) || 5,
-    shipping_per_km_rate: Number(storeSettings?.shipping_per_km_rate) || 100,
-    base_shipping_rate: Number(storeSettings?.base_shipping_rate) || 500,
-  } : undefined;
-
-  // Calculate delivery charge dynamically based on admin-configured zones and settings (without distance)
-  const deliveryCharge = calculateShippingAmountLegacy(cartTotal, (shippingZones as ShippingZone[]) || [], shippingSettings);
-  const totalWithDelivery = cartTotal + deliveryCharge;
+  // Get active zone to determine threshold for messaging
+  // Shipping will be calculated at checkout based on actual delivery distance
+  const activeZone = (shippingZones as ShippingZone[])?.find(z => z.is_active);
+  const freeShippingThreshold = activeZone?.free_shipping_threshold ?? 10000;
+  const meetsThreshold = cartTotal >= freeShippingThreshold;
+  const remainingAmount = freeShippingThreshold - cartTotal;
+  
+  // On cart page, only show Free shipping if threshold is met
+  // Otherwise, shipping will be calculated at checkout
+  const totalWithDelivery = cartTotal;
 
   if (isLoading) {
     return (
@@ -225,21 +224,34 @@ export default function CartPage() {
                   </span>
                   <span>{formatPrice(cartTotal)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Delivery</span>
-                  <span>
-                    {deliveryCharge === 0 ? (
-                      <span className="text-green-600">Free</span>
-                    ) : (
-                      formatPrice(deliveryCharge)
-                    )}
-                  </span>
-                </div>
-                {deliveryCharge > 0 && shippingZones.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Add {formatPrice((shippingZones.find(z => z.is_active)?.free_shipping_threshold ?? 10000) - cartTotal)} more for free delivery
+
+                {/* Delivery/Shipping Display */}
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Shipping</span>
+                    <span>
+                      {meetsThreshold ? (
+                        <span className="text-green-600 font-medium">Free</span>
+                      ) : (
+                        <span className="text-muted-foreground">At Checkout</span>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Transparency message */}
+                  <p className="text-xs text-muted-foreground italic">
+                    Shipping charges will be calculated at checkout based on your delivery address and distance.
                   </p>
-                )}
+
+                  {/* Show threshold info when below threshold */}
+                  {!meetsThreshold && (
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3 space-y-1">
+                      <p className="text-xs font-medium text-blue-900 dark:text-blue-200">
+                        Add {formatPrice(remainingAmount)} more for free shipping
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="border-t border-border my-4" />

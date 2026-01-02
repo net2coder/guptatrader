@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Package, MapPin, Phone, Download, Home, ShoppingBag } from 'lucide-react';
+import { CheckCircle, Package, MapPin, Phone, Download, Home, ShoppingBag, Shield } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -301,6 +301,21 @@ export default function OrderConfirmationPage() {
                 </div>
               </div>
             </div>
+
+            {/* Warranty Information */}
+            {storeSettings?.warranty_terms && (
+              <div className="mt-6 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Shield className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm text-green-900 dark:text-green-100 mb-2">Warranty Information</h4>
+                    <p className="text-xs text-green-700 dark:text-green-300 leading-relaxed whitespace-pre-line">
+                      {storeSettings.warranty_terms}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Footer with Store Address */}
             <div className="footer text-center mt-8 pt-6 border-t text-sm text-muted-foreground">

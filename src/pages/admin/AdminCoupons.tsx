@@ -12,6 +12,7 @@ import {
   useCreateCoupon, 
   useUpdateCoupon,
   useDeleteCoupon,
+  Coupon,
 } from '@/hooks/useAdmin';
 import { 
   Plus, 
@@ -48,7 +49,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function AdminCoupons() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCoupon, setEditingCoupon] = useState<any>(null);
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const { toast } = useToast();
 
   const { data: coupons = [], isLoading } = useCoupons();

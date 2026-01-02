@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAdminProducts, useDeleteProduct, useUpdateProduct, useCreateProduct, useCategories } from '@/hooks/useProducts';
+import { useAdminProducts, useDeleteProduct, useUpdateProduct, useCreateProduct, useCategories, DbProduct } from '@/hooks/useProducts';
 import { useProductVariants, useCreateProductVariant, useUpdateProductVariant, useDeleteProductVariant } from '@/hooks/useAdmin';
 import { formatPrice } from '@/lib/utils';
 import { ProductImageGallery } from '@/components/admin/ProductImageGallery';
@@ -30,7 +30,8 @@ import {
   Box,
   Tag,
   Settings2,
-  Info
+  Info,
+  Shield
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -86,6 +87,8 @@ interface ProductFormData {
   meta_description: string;
   is_active: boolean;
   is_featured: boolean;
+  has_warranty: boolean;
+  warranty_years: string;
 }
 
 const defaultFormData: ProductFormData = {
@@ -110,12 +113,14 @@ const defaultFormData: ProductFormData = {
   meta_description: '',
   is_active: true,
   is_featured: false,
+  has_warranty: false,
+  warranty_years: '1',
 };
 
 export default function AdminProducts() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<DbProduct | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(defaultFormData);
   const [variantsDialogOpen, setVariantsDialogOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
@@ -180,6 +185,8 @@ export default function AdminProducts() {
       meta_description: product.meta_description || '',
       is_active: product.is_active ?? true,
       is_featured: product.is_featured ?? false,
+      has_warranty: product.has_warranty ?? false,
+      warranty_years: String(product.warranty_years || '1'),
     });
     setIsDialogOpen(true);
   };
@@ -193,7 +200,6 @@ export default function AdminProducts() {
       description: formData.description || null,
       short_description: formData.short_description || null,
       price: displayPrice, // Display price (already includes configured GST)
-      gst_inclusive_price: null, // No longer needed; price is the final price
       compare_at_price: formData.compare_at_price ? Number(formData.compare_at_price) : null,
       cost_price: formData.cost_price ? Number(formData.cost_price) : null,
       sku: formData.sku || null,
@@ -210,6 +216,8 @@ export default function AdminProducts() {
       meta_description: formData.meta_description || null,
       is_active: formData.is_active,
       is_featured: formData.is_featured,
+      has_warranty: formData.has_warranty,
+      warranty_years: formData.has_warranty && formData.warranty_years ? Number(formData.warranty_years) : null,
     };
 
     if (editingProduct) {
@@ -634,6 +642,38 @@ export default function AdminProducts() {
                         onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_featured: checked }))}
                       />
                       <Label className="text-sm">Featured</Label>
+                    </div>
+                  </div>
+                  
+                  {/* Warranty Section */}
+                  <div className="pt-4 border-t border-border/50 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm font-semibold">Warranty</Label>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={formData.has_warranty}
+                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, has_warranty: checked }))}
+                        />
+                        <Label className="text-sm">Enable Warranty</Label>
+                      </div>
+                      {formData.has_warranty && (
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-muted-foreground">Duration:</Label>
+                          <Input
+                            type="number"
+                            value={formData.warranty_years}
+                            onChange={(e) => setFormData(prev => ({ ...prev, warranty_years: e.target.value }))}
+                            placeholder="Years"
+                            className="bg-muted/50 border-0 w-20"
+                            min="1"
+                            max="10"
+                          />
+                          <Label className="text-xs text-muted-foreground">years</Label>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </TabsContent>

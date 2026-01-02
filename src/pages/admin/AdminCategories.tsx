@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useProducts';
+import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, DbCategory } from '@/hooks/useProducts';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -62,7 +62,7 @@ const defaultFormData: CategoryFormData = {
 export default function AdminCategories() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingCategory, setEditingCategory] = useState<DbCategory | null>(null);
   const [formData, setFormData] = useState<CategoryFormData>(defaultFormData);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -123,8 +123,9 @@ export default function AdminCategories() {
 
       setFormData(prev => ({ ...prev, image_url: publicUrl }));
       toast({ title: 'Image uploaded successfully' });
-    } catch (error: any) {
-      toast({ title: 'Error uploading image', description: error.message, variant: 'destructive' });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
+      toast({ title: 'Error uploading image', description: errorMessage, variant: 'destructive' });
     } finally {
       setUploading(false);
     }

@@ -3,7 +3,8 @@ import { useNavigate, Navigate, Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/context/AuthContext';
-import { useUserOrders, OrderStatus, PaymentStatus, OrderItem } from '@/hooks/useOrders';
+import { useUserOrders, Order, OrderStatus, PaymentStatus, OrderItem } from '@/hooks/useOrders';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -36,7 +37,8 @@ import {
   Clock,
   Truck,
   XCircle,
-  CreditCard
+  CreditCard,
+  Shield
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -128,9 +130,10 @@ export default function ProfilePage() {
     is_default: false,
   });
 
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const { data: orders = [], isLoading: ordersLoading } = useUserOrders();
+  const { data: storeSettings } = useStoreSettings();
   
   const { data: addresses = [], isLoading: addressesLoading } = useQuery({
     queryKey: ['user-addresses', user?.id],
@@ -864,6 +867,21 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Warranty Information */}
+                  {storeSettings?.warranty_terms && (
+                    <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Shield className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm text-green-900 dark:text-green-100 mb-2">Warranty Information</h4>
+                          <p className="text-xs text-green-700 dark:text-green-300 leading-relaxed whitespace-pre-line">
+                            {storeSettings.warranty_terms}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <Separator />
 

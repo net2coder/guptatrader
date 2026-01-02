@@ -16,7 +16,7 @@ import { useShippingZones } from '@/hooks/useAdmin';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { formatPrice, calculateShippingAmount, ShippingBreakdown, ShippingZone, ShippingSettings, formatPriceWithGst, getGstPercentage } from '@/lib/utils';
+import { formatPrice, calculateShippingAmount, ShippingBreakdown, ShippingZone, formatPriceWithGst, getGstPercentage } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -92,20 +92,12 @@ export default function CheckoutPage() {
   // No additional GST calculation or addition needed
   // The subtotal already contains the GST configured by admin
   
-  // Convert store settings to ShippingSettings type
-  const shippingSettings: ShippingSettings | undefined = storeSettings ? {
-    free_shipping_threshold: Number(storeSettings?.free_shipping_threshold) || 10000,
-    distance_free_radius: Number(storeSettings?.distance_free_radius) || 5,
-    shipping_per_km_rate: Number(storeSettings?.shipping_per_km_rate) || 100,
-    base_shipping_rate: Number(storeSettings?.base_shipping_rate) || 500,
-  } : undefined;
-
-  // Calculate shipping dynamically based on admin-configured zones, settings, and distance
+  // Calculate shipping dynamically based on admin-configured shipping zones
+  // Threshold, rates, and distance all come from the active shipping zone
   const shippingResult = calculateShippingAmount(
     subtotal,
     deliveryDistance,
-    (shippingZones as ShippingZone[]) || [],
-    shippingSettings
+    (shippingZones as ShippingZone[]) || []
   );
   const shippingAmount = shippingResult.amount;
   const shippingBreakdown: ShippingBreakdown | null = shippingResult.breakdown;
@@ -256,11 +248,11 @@ export default function CheckoutPage() {
 
       // Navigate to order confirmation
       navigate(`/order-confirmation/${order.id}`);
-    } catch (error: any) {
-      console.error('Order error:', error);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast({
         title: 'Failed to place order',
-        description: error.message || 'Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -424,18 +416,15 @@ export default function CheckoutPage() {
                       ) : (
                         <>
                           <p className="text-muted-foreground">
-                            Order Value: {formatPrice(shippingBreakdown.order_value)} {shippingBreakdown.order_value >= shippingBreakdown.free_shipping_threshold ? '✓' : `(need ₹${shippingBreakdown.free_shipping_threshold - shippingBreakdown.order_value} more)`}
+                            {shippingBreakdown.distance_charged > 0 && (
+                              <>
+                                Distance Charge: {shippingBreakdown.distance_charged.toFixed(1)}km × {formatPrice(shippingBreakdown.per_km_rate)}/km = {formatPrice(shippingBreakdown.distance_charge)}
+                              </>
+                            )}
+                            {shippingBreakdown.distance_charged === 0 && (
+                              <>Within free radius</>
+                            )}
                           </p>
-                          {shippingBreakdown.base_rate > 0 && (
-                            <p className="text-muted-foreground">
-                              Base Rate: {formatPrice(shippingBreakdown.base_rate)}
-                            </p>
-                          )}
-                          {shippingBreakdown.distance_charged > 0 && (
-                            <p className="text-muted-foreground">
-                              Distance Charge: {shippingBreakdown.distance_charged.toFixed(1)}km × {formatPrice(shippingBreakdown.per_km_rate)}/km = {formatPrice(shippingBreakdown.distance_charge)}
-                            </p>
-                          )}
                           <Separator className="my-2" />
                           <p className="font-medium text-blue-900 dark:text-blue-200">
                             Total Shipping: {formatPrice(shippingBreakdown.total_shipping_charge)}
@@ -445,7 +434,7 @@ export default function CheckoutPage() {
                     </motion.div>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Enter the distance from our store to your delivery address. Free delivery applies within {shippingBreakdown?.distance_free_radius || 5}km for eligible orders.
+                    Enter the distance from our store to your delivery address. Shipping rates are calculated based on distance and eligibility for free shipping ({shippingBreakdown?.distance_free_radius || 5}km free radius for qualifying orders).
                   </p>
                 </div>
               </CardContent>
@@ -636,7 +625,27 @@ export default function CheckoutPage() {
                   Payment Method
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
+                {/* COD Not Available */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-900"
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                        Cash on Delivery (COD) not available for now
+                      </p>
+                      <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
+                        Please use the manual payment option below.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Manual Payment Option */}
                 <div className="p-4 bg-muted/50 rounded-lg border">
                   <p className="font-medium mb-2">Manual Confirmation</p>
                   <p className="text-sm text-muted-foreground">
@@ -704,8 +713,10 @@ export default function CheckoutPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Shipping</span>
                     <span>
-                      {shippingAmount === 0 ? (
+                      {shippingBreakdown && shippingBreakdown.is_free_shipping ? (
                         <span className="text-green-600 font-medium">Free</span>
+                      ) : deliveryDistance <= 0 ? (
+                        <span className="text-muted-foreground text-xs">Please enter distance in km.</span>
                       ) : (
                         <span>{formatPrice(shippingAmount)}</span>
                       )}
@@ -735,7 +746,7 @@ export default function CheckoutPage() {
                   className="w-full"
                   size="lg"
                   onClick={handlePlaceOrder}
-                  disabled={isSubmitting || (user ? !selectedAddressId : !isGuestCheckoutValid())}
+                  disabled={isSubmitting || deliveryDistance <= 0 || (user ? !selectedAddressId : !isGuestCheckoutValid())}
                 >
                   {isSubmitting ? 'Placing Order...' : 'Place Order'}
                 </Button>

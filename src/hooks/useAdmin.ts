@@ -7,7 +7,6 @@ export interface ShippingZone {
   id: string;
   name: string;
   regions: string[];
-  base_rate: number;
   per_km_rate: number | null;
   free_shipping_threshold: number | null;
   estimated_days_min: number;
@@ -328,11 +327,19 @@ export function useCreateProductVariant() {
 
   return useMutation({
     mutationFn: async (variant: { product_id: string; name: string; sku?: string; price_modifier?: number; stock_quantity?: number; attributes?: Record<string, unknown>; is_active?: boolean; sort_order?: number }) => {
+      const { product_id, name, sku, price_modifier, stock_quantity, is_active, sort_order, attributes } = variant;
+      
       const { data, error } = await supabase
         .from('product_variants')
         .insert({
-          ...variant,
-          attributes: variant.attributes as Record<string, unknown>,
+          product_id,
+          name,
+          sku,
+          price_modifier,
+          stock_quantity,
+          is_active,
+          sort_order,
+          attributes: attributes ? JSON.parse(JSON.stringify(attributes)) : null,
         })
         .select()
         .single();
@@ -356,11 +363,13 @@ export function useUpdateProductVariant() {
 
   return useMutation({
     mutationFn: async ({ id, product_id, ...variant }: { id: string; product_id: string; name?: string; sku?: string; price_modifier?: number; stock_quantity?: number; attributes?: Record<string, unknown>; is_active?: boolean; sort_order?: number }) => {
+      const { attributes, ...updateData } = variant;
+      
       const { data, error } = await supabase
         .from('product_variants')
         .update({
-          ...variant,
-          attributes: variant.attributes as Record<string, unknown>,
+          ...updateData,
+          attributes: attributes ? JSON.parse(JSON.stringify(attributes)) : undefined,
         })
         .eq('id', id)
         .select()

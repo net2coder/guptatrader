@@ -25,6 +25,7 @@ import { useProduct, useProducts } from '@/hooks/useProducts';
 import { useShippingZones } from '@/hooks/useAdmin';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { toast } from 'sonner';
 import { getProductImage, getDiscountPercentage, formatPrice, isInStock } from '@/types/product';
 
@@ -33,6 +34,7 @@ export default function ProductDetailPage() {
   const navigate = useNavigate();
   const { data: product, isLoading } = useProduct(slug || '');
   const { data: shippingZones = [] } = useShippingZones();
+  const { data: storeSettings } = useStoreSettings();
   const [quantity, setQuantity] = useState(1);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { addToCart, isInCart } = useCart();
@@ -351,6 +353,25 @@ export default function ProductDetailPage() {
               )}
             </div>
 
+            {/* Warranty Information */}
+            {product.has_warranty && product.warranty_years && (
+              <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl">
+                <Shield className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-sm text-green-900 dark:text-green-100">
+                      {product.warranty_years} Year{Number(product.warranty_years) > 1 ? 's' : ''} Warranty
+                    </span>
+                  </div>
+                  {storeSettings?.warranty_terms && (
+                    <p className="text-xs text-green-700 dark:text-green-300 leading-relaxed">
+                      {storeSettings.warranty_terms}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Quantity and actions */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center gap-4">
@@ -421,7 +442,9 @@ export default function ProductDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
               {[
                 { icon: Truck, title: 'Free Delivery', desc: `On orders above ₹${freeShippingThreshold.toLocaleString()}` },
-                { icon: Shield, title: '5 Year Warranty', desc: 'Manufacturer warranty' },
+                ...(product.has_warranty && product.warranty_years ? [
+                  { icon: Shield, title: `${product.warranty_years} Year${Number(product.warranty_years) > 1 ? 's' : ''} Warranty`, desc: 'Manufacturer warranty' }
+                ] : []),
                 { icon: Award, title: 'Best Price', desc: 'Quality at best prices' },
               ].map(({ icon: Icon, title, desc }) => (
                 <div
@@ -495,9 +518,17 @@ export default function ProductDetailPage() {
                           </tr>
                         )}
                         {product.sku && (
-                          <tr>
+                          <tr className="border-b border-border/50">
                             <td className="py-3 px-4 font-medium text-foreground">SKU</td>
                             <td className="py-3 px-4 text-muted-foreground font-mono text-sm">{product.sku}</td>
+                          </tr>
+                        )}
+                        {product.has_warranty && product.warranty_years && (
+                          <tr>
+                            <td className="py-3 px-4 font-medium text-foreground">Warranty</td>
+                            <td className="py-3 px-4 text-muted-foreground">
+                              {product.warranty_years} Year{Number(product.warranty_years) > 1 ? 's' : ''}
+                            </td>
                           </tr>
                         )}
                       </tbody>
